@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YieldVault — Crypto Staking</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+--bg:#040810;--bg1:#07111e;--bg2:#0b1827;--card:#0d1f35;
+--border:rgba(148,210,255,0.09);--border2:rgba(148,210,255,0.18);
+--accent:#2d9cdb;--green:#00c896;--gold:#f2c94c;--red:#ff6b6b;
+--blue:#56ccf2;--purple:#bb86fc;--orange:#f39c12;
+--text:#f0f4f8;--text2:#8fa8c0;--text3:#4d6a82;
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden;font-size:14px}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+background:radial-gradient(ellipse 70% 40% at 15% -5%,rgba(45,156,219,.07),transparent),
+radial-gradient(ellipse 50% 35% at 85% 105%,rgba(0,200,150,.04),transparent)}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* TOAST */
+#toast{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:7px;max-width:290px}
+.ti{background:var(--card);border:1px solid var(--border2);border-left:3px solid var(--accent);padding:10px 14px;border-radius:10px;font-size:12px;animation:tIn .2s ease;display:flex;align-items:center;gap:9px}
+.ti.ok{border-left-color:var(--green)}.ti.err{border-left-color:var(--red)}.ti.warn{border-left-color:var(--gold)}
+.ti-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.ti.ok .ti-dot{background:var(--green)}.ti.err .ti-dot{background:var(--red)}.ti.warn .ti-dot{background:var(--gold)}
+@keyframes tIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+
+/* PAGES */
+.pg{display:none}.pg.on{display:block}
+
+/* ===== AUTH ===== */
+#authWrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;z-index:1}
+.auth-box{width:100%;max-width:400px}
+.auth-hero{text-align:center;margin-bottom:24px}
+.auth-mark{width:58px;height:58px;background:linear-gradient(135deg,#2d9cdb,#00c896);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 8px 28px rgba(45,156,219,.22)}
+.auth-mark svg{width:26px;height:26px}
+.auth-h{font-size:26px;font-weight:800;letter-spacing:-.5px}
+.auth-s{font-size:13px;color:var(--text2);margin-top:5px;line-height:1.5}
+.acard{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:26px}
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.fld input,.fld select,.fld textarea{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 13px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:border .18s}
+.fld input:focus,.fld select:focus{border-color:var(--accent)}
+.fld textarea{resize:vertical;min-height:80px}
+.btn{padding:10px 16px;border-radius:8px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;font-size:13px;transition:all .18s;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.btn-primary{background:linear-gradient(135deg,#2d9cdb,#1a7bb5);color:#fff}
+.btn-primary:hover{opacity:.87;transform:translateY(-1px)}
+.btn-green{background:linear-gradient(135deg,#00c896,#009e7a);color:#fff}
+.btn-green:hover{opacity:.87}
+.btn-red{background:linear-gradient(135deg,#ff6b6b,#c0392b);color:#fff}
+.btn-purple{background:linear-gradient(135deg,#9b59b6,#7d3c98);color:#fff}
+.btn-purple:hover{opacity:.87;transform:translateY(-1px)}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text2)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:7px}
+.btn-full{width:100%}
+.btn-admin{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff}
+.divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--text3);font-size:11px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.wopt{display:flex;align-items:center;gap:11px;padding:12px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .18s;margin-bottom:8px}
+.wopt:hover{border-color:var(--accent);background:rgba(45,156,219,.04)}
+.wopt.connecting{border-color:var(--gold);animation:wp 1s infinite}
+.wopt.connected{border-color:var(--green);background:rgba(0,200,150,.04)}
+@keyframes wp{0%,100%{opacity:1}50%{opacity:.65}}
+.wopt-ico{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.wopt-name{font-size:13px;font-weight:600}
+.wopt-desc{font-size:11px;color:var(--text3);margin-top:1px}
+.wopt-arr{margin-left:auto;color:var(--text3);font-size:16px}
+.auth-sw{text-align:center;margin-top:14px;font-size:12px;color:var(--text3)}
+.auth-sw a{color:var(--accent);cursor:pointer}
+.tbadges{display:flex;gap:7px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.tbadge{display:flex;align-items:center;gap:4px;padding:4px 9px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:5px;font-size:10px;color:var(--text3)}
+
+/* ===== MAIN NAV ===== */
+nav{position:sticky;top:0;z-index:200;height:58px;background:rgba(4,8,16,.92);backdrop-filter:blur(18px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:10px;position:relative;z-index:200}
+.logo-mark{width:28px;height:28px;background:linear-gradient(135deg,#2d9cdb,#00c896);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-mark svg{width:13px;height:13px}
+.logo-txt{font-size:15px;font-weight:800;letter-spacing:-.3px}
+.live-pill{display:flex;align-items:center;gap:5px;background:rgba(0,200,150,.08);border:1px solid rgba(0,200,150,.2);border-radius:20px;padding:3px 9px;margin-left:auto}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.live-txt{font-size:10px;font-weight:700;color:var(--green);letter-spacing:.5px}
+.nav-btns{display:flex;gap:7px}
+.nbtn{padding:5px 11px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-family:'Inter',sans-serif;font-weight:500;font-size:12px;transition:all .18s}
+.nbtn:hover{border-color:var(--accent);color:var(--accent)}
+.wbadge{display:flex;align-items:center;gap:5px;background:rgba(0,200,150,.08);border:1px solid rgba(0,200,150,.2);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--green);font-family:'JetBrains Mono',monospace;cursor:pointer}
+
+/* ===== MAIN LAYOUT ===== */
+.wrap{max-width:1100px;margin:0 auto;padding:22px 16px 96px;position:relative;z-index:1}
+.sec{display:none}.sec.on{display:block}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sec-title{font-size:16px;font-weight:700;letter-spacing:-.2px}
+.sec-meta{font-size:11px;color:var(--text3)}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin-bottom:20px}
+.scard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden}
+.scard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.scard.b::before{background:linear-gradient(90deg,var(--blue),transparent)}
+.scard.g::before{background:linear-gradient(90deg,var(--green),transparent)}
+.scard.w::before{background:linear-gradient(90deg,var(--gold),transparent)}
+.scard.p::before{background:linear-gradient(90deg,var(--purple),transparent)}
+.sc-lbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.sc-val{font-size:21px;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:-.5px}
+.sc-val.b{color:var(--blue)}.sc-val.g{color:var(--green)}.sc-val.w{color:var(--gold)}.sc-val.p{color:var(--purple)}
+.sc-sub{font-size:10px;color:var(--text3);margin-top:3px;font-family:'JetBrains Mono',monospace}
+
+/* TICKER */
+.ticker{background:var(--bg1);border:1px solid var(--border);border-radius:10px;padding:9px 14px;margin-bottom:18px;display:flex;align-items:center;gap:10px;overflow:hidden}
+.ticker-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;flex-shrink:0}
+.ticker-items{display:flex;gap:18px;overflow:hidden;flex:1;flex-wrap:wrap}
+.ti2{display:flex;align-items:center;gap:5px;font-size:12px;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.tn{color:var(--text3)}.tv{color:var(--green);font-weight:600}.tc{font-size:10px;color:var(--text3)}
+.tc.up{color:var(--green)}.tc.dn{color:var(--red)}
+
+/* FEED */
+.feed-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:18px}
+.feed-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.feed-title{font-size:13px;font-weight:700}
+.feed-list{display:flex;flex-direction:column;gap:6px}
+.fi{display:flex;align-items:center;gap:9px;padding:8px 11px;background:var(--bg2);border-radius:8px;animation:fiIn .35s ease}
+@keyframes fiIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+.fav{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.finfo{flex:1;min-width:0}
+.fuser{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fdet{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:1px}
+.famt{font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--green);flex-shrink:0}
+.ftm{font-size:10px;color:var(--text3);flex-shrink:0}
+
+/* FLEX BANNER */
+.flex-banner{background:linear-gradient(135deg,rgba(155,89,182,.1),rgba(45,156,219,.05));border:1px solid rgba(155,89,182,.2);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:13px;flex-wrap:wrap}
+.fb-ico{width:40px;height:40px;background:rgba(155,89,182,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.fb-info{flex:1;min-width:180px}
+.fb-h{font-size:13px;font-weight:700;color:var(--purple)}
+.fb-s{font-size:11px;color:var(--text2);margin-top:3px}
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.chip{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
+.chip-p{background:rgba(155,89,182,.12);color:var(--purple);border:1px solid rgba(155,89,182,.2)}
+.chip-g{background:rgba(0,200,150,.1);color:var(--green);border:1px solid rgba(0,200,150,.2)}
+.chip-b{background:rgba(45,156,219,.1);color:var(--blue);border:1px solid rgba(45,156,219,.2)}
+.chip-w{background:rgba(242,201,76,.1);color:var(--gold);border:1px solid rgba(242,201,76,.2)}
+
+/* POOLS */
+.pools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:13px}
+.pcard{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:18px;transition:all .22s;cursor:pointer}
+.pcard:hover{border-color:rgba(45,156,219,.35);transform:translateY(-2px);box-shadow:0 8px 28px rgba(45,156,219,.1)}
+.pcard.fpc{border-color:rgba(155,89,182,.2)}
+.pcard.fpc:hover{border-color:rgba(155,89,182,.4);box-shadow:0 8px 28px rgba(155,89,182,.1)}
+.pc-hd{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.pc-ico{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.pc-name{font-size:13px;font-weight:700}
+.pc-net{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:2px}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.badge-hot{background:rgba(255,107,107,.1);color:var(--red);border:1px solid rgba(255,107,107,.22)}
+.badge-new{background:rgba(0,200,150,.1);color:var(--green);border:1px solid rgba(0,200,150,.22)}
+.badge-stable{background:rgba(45,156,219,.1);color:var(--blue);border:1px solid rgba(45,156,219,.22)}
+.badge-flex{background:rgba(155,89,182,.12);color:var(--purple);border:1px solid rgba(155,89,182,.22)}
+.badge-elite{background:rgba(242,201,76,.1);color:var(--gold);border:1px solid rgba(242,201,76,.22)}
+.pc-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.pcs{background:var(--bg2);border-radius:7px;padding:8px 10px}
+.pcs-l{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.pcs-v{font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace}
+.pcs-v.g{color:var(--green)}.pcs-v.b{color:var(--blue)}.pcs-v.p{color:var(--purple)}
+.pc-bar{height:3px;background:var(--border);border-radius:2px;margin-bottom:4px;overflow:hidden}
+.pc-fill{height:100%;border-radius:2px}
+.pc-cap{font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-bottom:12px}
+.pbtn{width:100%;padding:9px;border-radius:7px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;font-size:12px;transition:all .18s}
+.pbtn-p{background:rgba(45,156,219,.1);border:1px solid rgba(45,156,219,.2);color:var(--blue)}
+.pbtn-p:hover{background:rgba(45,156,219,.17)}
+.pbtn-f{background:rgba(155,89,182,.1);border:1px solid rgba(155,89,182,.2);color:var(--purple)}
+.pbtn-f:hover{background:rgba(155,89,182,.17)}
+
+/* DEP/WD */
+.dw-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:620px){.dw-grid{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:20px}
+.panel-h{font-size:14px;font-weight:700;margin-bottom:3px}
+.panel-s{font-size:11px;color:var(--text3);margin-bottom:16px}
+.ntabs{display:flex;gap:6px;margin-bottom:12px}
+.ntab{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);color:var(--text3);transition:all .18s;font-family:'JetBrains Mono',monospace}
+.ntab.active{border-color:var(--accent);color:var(--accent);background:rgba(45,156,219,.08)}
+.addr-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:11px 13px;font-family:'JetBrains Mono',monospace;font-size:11px;word-break:break-all;color:var(--blue);margin-bottom:9px;cursor:pointer;transition:all .18s;line-height:1.6}
+.addr-box:hover{border-color:var(--accent)}
+.copy-btn{width:100%;padding:8px;border-radius:7px;background:var(--bg2);border:1px solid var(--border);color:var(--text2);cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;transition:all .18s;margin-bottom:9px;display:flex;align-items:center;justify-content:center;gap:6px}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+.warn-box{background:rgba(242,201,76,.05);border:1px solid rgba(242,201,76,.2);border-radius:7px;padding:9px 11px;font-size:11px;color:#c9a227;line-height:1.6}
+.bal-box{background:var(--bg2);border-radius:8px;padding:13px;margin-bottom:14px}
+.bal-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px}
+.bal-val{font-size:23px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--green)}
+.qrow{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+.qb{padding:3px 9px;border-radius:5px;font-size:10px;font-weight:600;background:var(--bg2);border:1px solid var(--border);color:var(--text3);cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all .18s}
+.qb:hover{border-color:var(--accent);color:var(--accent)}
+
+/* TX */
+.tx-wrap{background:var(--card);border:1px solid var(--border);border-radius:13px;overflow:hidden;overflow-x:auto}
+.tx-th{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;padding:8px 14px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);border-bottom:1px solid var(--border)}
+.tx-row{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;padding:10px 14px;border-bottom:1px solid rgba(148,210,255,.03);font-size:12px;transition:background .15s}
+.tx-row:last-child{border-bottom:none}
+.tx-row:hover{background:var(--bg2)}
+.tx-tc{display:flex;align-items:center;gap:7px;font-weight:500}
+.tx-ico{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.spill{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600}
+.s-ok{background:rgba(0,200,150,.1);color:var(--green)}
+.s-pend{background:rgba(242,201,76,.1);color:var(--gold)}
+
+/* STAKES */
+.stake-card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:9px}
+.sk-l{display:flex;align-items:center;gap:10px}
+.sk-ico{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.sk-vals{display:flex;gap:16px;flex-wrap:wrap}
+.sv-l{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.sv-v{font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;margin-top:2px}
+
+/* FLEX PANEL */
+.flex-panel{background:linear-gradient(135deg,rgba(155,89,182,.08),rgba(45,156,219,.04));border:1px solid rgba(155,89,182,.2);border-radius:13px;padding:16px;margin-bottom:13px}
+.fp-hd{display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap}
+.fp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.fg{background:rgba(0,0,0,.2);border-radius:7px;padding:9px;text-align:center}
+.fg-l{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.fg-v{font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;margin-top:3px}
+.fp-acts{display:flex;gap:6px;flex-wrap:wrap}
+
+/* SUPPORT */
+.supp-wrap{max-width:520px;margin:0 auto}
+.supp-hero{background:var(--card);border:1px solid var(--border);border-radius:15px;padding:28px;text-align:center;margin-bottom:13px}
+.tg-circle{width:64px;height:64px;background:linear-gradient(135deg,#0088cc,#00aaff);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:24px}
+.supp-h{font-size:19px;font-weight:700;margin-bottom:6px}
+.supp-s{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:18px}
+.tg-link{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#0088cc,#00aaff);color:#fff;padding:11px 26px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;transition:all .18s}
+.tg-link:hover{opacity:.87;transform:translateY(-1px)}
+.rs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:18px}
+.rs-item{background:var(--bg2);border-radius:7px;padding:11px;text-align:center}
+.rs-val{font-size:17px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--green)}
+.rs-lbl{font-size:10px;color:var(--text3);margin-top:3px}
+.faq-list{background:var(--card);border:1px solid var(--border);border-radius:13px;overflow:hidden}
+.faq-item{padding:13px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .18s}
+.faq-item:last-child{border-bottom:none}
+.faq-item:hover{background:var(--bg2)}
+.faq-q{font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:9px}
+.faq-a{font-size:12px;color:var(--text2);margin-top:7px;line-height:1.6;display:none}
+.faq-item.open .faq-a{display:block}
+.faq-arr{color:var(--text3);transition:transform .18s;flex-shrink:0}
+.faq-item.open .faq-arr{transform:rotate(90deg)}
+
+/* PROFILE */
+.prof-av{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:700;margin-bottom:11px}
+.kv{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--bg2);border-radius:7px;font-size:13px}
+.ws-bar{background:rgba(0,200,150,.06);border:1px solid rgba(0,200,150,.2);border-radius:9px;padding:11px 14px;margin-bottom:13px;display:flex;align-items:center;gap:11px}
+.ws-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.ws-info{flex:1}
+.ws-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.ws-addr{font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--green);margin-top:2px}
+.ws-disc{font-size:11px;color:var(--red);cursor:pointer;font-weight:600}
+.ws-disc:hover{text-decoration:underline}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.76);backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;padding:18px;overflow-y:auto}
+.modal-bg.hidden{display:none}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:400px;margin:auto}
+.modal-h{font-size:16px;font-weight:700;margin-bottom:3px}
+.modal-s{font-size:12px;color:var(--text3);margin-bottom:16px}
+.minfo{background:rgba(155,89,182,.08);border:1px solid rgba(155,89,182,.2);border-radius:8px;padding:12px;margin-bottom:13px}
+.mrow{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.mrow:last-child{margin-bottom:0}
+.preview{background:var(--bg2);border-radius:8px;padding:12px;margin:12px 0}
+.pr{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px}
+.pr:last-child{margin-bottom:0;padding-top:8px;border-top:1px solid var(--border);font-weight:600}
+input[type=range]{-webkit-appearance:none;width:100%;height:3px;border-radius:2px;background:var(--border);outline:none;margin:9px 0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--accent);cursor:pointer}
+.amt-inp{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:11px 13px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:16px;text-align:center;outline:none}
+.amt-inp:focus{border-color:var(--accent)}
+.mact{display:flex;gap:8px;margin-top:14px}
+.mact .btn{flex:1}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(4,8,16,.96);backdrop-filter:blur(18px);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:8px 0 max(12px,env(safe-area-inset-bottom))}
+.ni{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:0 8px;color:var(--text3);transition:color .18s;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.ni.active{color:var(--accent)}
+.ni svg{width:19px;height:19px}
+
+/* ===== ADMIN ===== */
+#adminPage{display:none;min-height:100vh;position:relative;z-index:1}
+.adm-login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(231,76,60,.07),transparent)}
+.adm-dash{display:none}
+.adm-nav{position:sticky;top:0;z-index:100;height:54px;background:rgba(4,8,16,.94);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:10px}
+.adm-tabs{background:var(--bg1);border-bottom:1px solid var(--border);padding:0 18px;display:flex;gap:2px;overflow-x:auto}
+.atab{padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;transition:all .18s;white-space:nowrap}
+.atab:hover{color:var(--text)}
+.atab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.adm-content{max-width:1080px;margin:0 auto;padding:18px 14px 40px}
+.adm-sec{display:none}.adm-sec.on{display:block}
+.adm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin-bottom:18px}
+.ascard{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:15px;position:relative;overflow:hidden}
+.ascard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.ascard.b::before{background:linear-gradient(90deg,var(--blue),transparent)}
+.ascard.g::before{background:linear-gradient(90deg,var(--green),transparent)}
+.ascard.w::before{background:linear-gradient(90deg,var(--gold),transparent)}
+.ascard.r::before{background:linear-gradient(90deg,var(--red),transparent)}
+.ascard.p::before{background:linear-gradient(90deg,var(--purple),transparent)}
+.ascard.o::before{background:linear-gradient(90deg,var(--orange),transparent)}
+.as-lbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.as-val{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:-.5px}
+.as-val.b{color:var(--blue)}.as-val.g{color:var(--green)}.as-val.w{color:var(--gold)}.as-val.r{color:var(--red)}.as-val.p{color:var(--purple)}.as-val.o{color:var(--orange)}
+.tbl-wrap{background:var(--card);border:1px solid var(--border);border-radius:13px;overflow:hidden;margin-bottom:14px}
+.tbl-hd{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border)}
+.tbl-h{font-size:13px;font-weight:700}
+.tbl-s{font-size:11px;color:var(--text3)}
+.tscroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 13px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);border-bottom:1px solid var(--border)}
+td{padding:10px 13px;border-bottom:1px solid rgba(148,210,255,.03)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11px}
+.apill{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600}
+.apill-g{background:rgba(0,200,150,.1);color:var(--green)}
+.apill-y{background:rgba(242,201,76,.1);color:var(--gold)}
+.apill-r{background:rgba(255,107,107,.1);color:var(--red)}
+.apill-b{background:rgba(45,156,219,.1);color:var(--blue)}
+.abtn{padding:4px 9px;border-radius:5px;border:1px solid;cursor:pointer;font-family:'Inter',sans-serif;font-size:11px;font-weight:600;transition:all .18s}
+.abtn-g{border-color:rgba(0,200,150,.3);color:var(--green);background:rgba(0,200,150,.06)}
+.abtn-g:hover{background:rgba(0,200,150,.13)}
+.abtn-r{border-color:rgba(255,107,107,.3);color:var(--red);background:rgba(255,107,107,.06)}
+.abtn-r:hover{background:rgba(255,107,107,.13)}
+.abtn-b{border-color:rgba(45,156,219,.3);color:var(--blue);background:rgba(45,156,219,.06)}
+.abtn-y{border-color:rgba(242,201,76,.3);color:var(--gold);background:rgba(242,201,76,.06)}
+.srch-row{display:flex;gap:8px;margin-bottom:13px;flex-wrap:wrap}
+.srch{background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:7px 11px;color:var(--text);font-family:'Inter',sans-serif;font-size:12px;outline:none;flex:1;min-width:140px}
+.srch:focus{border-color:var(--accent)}
+.fsel{background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:7px 11px;color:var(--text2);font-family:'Inter',sans-serif;font-size:12px;outline:none}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.set-row:last-child{border-bottom:none}
+.sr-lbl{font-size:13px;font-weight:500}
+.sr-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.toggle{width:40px;height:21px;border-radius:11px;position:relative;cursor:pointer;transition:background .18s;flex-shrink:0}
+.toggle.on{background:var(--green)}.toggle.off{background:var(--border2)}
+.tknob{width:15px;height:15px;border-radius:50%;background:#fff;position:absolute;top:3px;transition:left .18s}
+.toggle.on .tknob{left:22px}.toggle.off .tknob{left:3px}
+.ie{display:flex;align-items:center;gap:7px}
+.ie-val{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--gold)}
+
+/* ADMIN MODALS */
+.amodal-bg{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(8px);z-index:600;display:none;align-items:center;justify-content:center;padding:18px}
+.amodal-bg.show{display:flex}
+.amodal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:380px}
+.am-h{font-size:15px;font-weight:700;margin-bottom:3px}
+.am-s{font-size:12px;color:var(--text3);margin-bottom:14px}
+.am-acts{display:flex;gap:8px;margin-top:14px}
+.am-acts .btn{flex:1}
+
+/* RESPONSIVE */
+@media(max-width:720px){
+  .tx-th,.tx-row{grid-template-columns:1.2fr 1fr 1fr}
+  .tx-th span:nth-child(3),.tx-th span:nth-child(4),.tx-row>*:nth-child(3),.tx-row>*:nth-child(4){display:none}
+  .pools-grid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .adm-stats{grid-template-columns:repeat(2,1fr)}
+  .nav-btns .nbtn:first-child{display:none}
+  .fp-grid{grid-template-columns:repeat(3,1fr)}
+  .ticker-items .ti2:nth-child(n+4){display:none}
+}
+@media(max-width:400px){
+  .stats-grid,.adm-stats{grid-template-columns:1fr 1fr}
+  nav{padding:0 12px}
+  .wrap{padding:16px 12px 96px}
+}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- ===================== AUTH PAGE ===================== -->
+<div id="authPage" class="pg on">
+<div id="authWrap">
+<div class="auth-box">
+  <div class="auth-hero">
+    <div class="auth-mark">
+      <svg viewBox="0 0 32 32" fill="none"><path d="M16 4L28 10V22L16 28L4 22V10Z" stroke="white" stroke-width="1.5" fill="none"/><path d="M16 10L22 13V19L16 22L10 19V13Z" fill="white" fill-opacity=".9"/></svg>
+    </div>
+    <div class="auth-h">YieldVault</div>
+    <div class="auth-s">Institutional-grade crypto staking.<br>Trusted by 47,000+ users worldwide.</div>
+  </div>
+  <div class="acard">
+    <div class="fld"><label>Email Address</label><input type="email" id="aEmail" placeholder="your@email.com" autocomplete="email"></div>
+    <div class="fld"><label>Password</label><input type="password" id="aPass" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')doAuth()"></div>
+    <div id="aNameFld" class="fld" style="display:none"><label>Full Name</label><input type="text" id="aName" placeholder="Your name"></div>
+    <button class="btn btn-primary btn-full" onclick="doAuth()"><span id="aBtnTxt">Sign In</span></button>
+    <div class="divider">or connect wallet</div>
+    <div class="wopt" id="wopt-trust" onclick="connectWallet('trust')">
+      <div class="wopt-ico" style="background:#1a4f8a">🔐</div>
+      <div><div class="wopt-name">Trust Wallet</div><div class="wopt-desc">Mobile · BEP20 / TRC20 / EVM</div></div>
+      <div class="wopt-arr" id="wa-trust">›</div>
+    </div>
+    <div class="wopt" id="wopt-mm" onclick="connectWallet('metamask')">
+      <div class="wopt-ico" style="background:#e8761b">🦊</div>
+      <div><div class="wopt-name">MetaMask</div><div class="wopt-desc">Browser extension · EVM</div></div>
+      <div class="wopt-arr" id="wa-mm">›</div>
+    </div>
+    <div class="wopt" id="wopt-wc" onclick="connectWallet('wc')">
+      <div class="wopt-ico" style="background:#3b99fc">🔗</div>
+      <div><div class="wopt-name">WalletConnect</div><div class="wopt-desc">Scan QR · 300+ wallets</div></div>
+      <div class="wopt-arr" id="wa-wc">›</div>
+    </div>
+    <div class="auth-sw"><span id="aSW">New to YieldVault?</span> <a onclick="toggleAuth()">Create account</a></div>
+  </div>
+  <div class="tbadges">
+    <div class="tbadge">🔒 SSL</div>
+    <div class="tbadge">✓ KYC</div>
+    <div class="tbadge">🛡 Protected</div>
+    <div class="tbadge">⚡ Instant</div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- ===================== MAIN APP ===================== -->
+<div id="mainPage" class="pg">
+<nav style="position:sticky;top:0;z-index:200;height:58px;background:rgba(4,8,16,.92);backdrop-filter:blur(18px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:10px">
+  <div class="logo-mark"><svg viewBox="0 0 32 32" fill="none"><path d="M16 4L28 10V22L16 28L4 22V10Z" stroke="white" stroke-width="1.5" fill="none"/><path d="M16 10L22 13V19L16 22L10 19V13Z" fill="white" fill-opacity=".85"/></svg></div>
+  <div class="logo-txt">YieldVault</div>
+  <div class="live-pill"><div class="live-dot"></div><div class="live-txt">LIVE</div></div>
+  <div class="nav-btns" style="margin-left:auto;display:flex;gap:7px;align-items:center">
+    <div id="wbadge" class="wbadge" style="display:none" onclick="showSec('secProfile');setNav('profile')"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block"></span><span id="wshort">0x...</span></div>
+    <button class="nbtn" onclick="showSec('secSupport');setNav('support')">Support</button>
+    <button class="nbtn" onclick="doLogout()">Sign Out</button>
+  </div>
+</nav>
+<div class="wrap">
+  <!-- HOME -->
+  <div class="sec on" id="secHome">
+    <div class="ticker">
+      <div class="ticker-lbl">Live</div>
+      <div class="ticker-items">
+        <div class="ti2"><span class="tn">BTC</span><span class="tv" id="t-btc">Loading...</span><span class="tc" id="tc-btc"></span></div>
+        <div class="ti2"><span class="tn">ETH</span><span class="tv" id="t-eth">—</span><span class="tc" id="tc-eth"></span></div>
+        <div class="ti2"><span class="tn">BNB</span><span class="tv" id="t-bnb">—</span><span class="tc" id="tc-bnb"></span></div>
+        <div class="ti2"><span class="tn">TRX</span><span class="tv" id="t-trx">—</span><span class="tc" id="tc-trx"></span></div>
+        <div class="ti2"><span class="tn">TVL</span><span class="tv">$354.2M</span><span class="tc up">↑</span></div>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="scard b"><div class="sc-lbl">Deposited</div><div class="sc-val b">$<span id="sDep">0.00</span></div><div class="sc-sub">BEP20/TRC20</div></div>
+      <div class="scard g"><div class="sc-lbl">Earned</div><div class="sc-val g">$<span id="sEarned">0.00</span></div><div class="sc-sub">All rewards</div></div>
+      <div class="scard w"><div class="sc-lbl">Balance</div><div class="sc-val w">$<span id="sBal">0.00</span></div><div class="sc-sub">Available</div></div>
+      <div class="scard p"><div class="sc-lbl">Stakes</div><div class="sc-val p"><span id="sStakes">0</span></div><div class="sc-sub">Active pools</div></div>
+    </div>
+    <div class="feed-card">
+      <div class="feed-hd">
+        <div><div class="feed-title">Live Deposits</div></div>
+        <div class="live-pill"><div class="live-dot"></div><div class="live-txt">LIVE</div></div>
+      </div>
+      <div class="feed-list" id="feedList"></div>
+    </div>
+    <div class="flex-banner">
+      <div class="fb-ico">🔓</div>
+      <div class="fb-info">
+        <div class="fb-h">Flexible Staking — No Lock Period</div>
+        <div class="fb-s">Deposit anytime, withdraw anytime. 14% APY daily compound.</div>
+        <div class="chips"><span class="chip chip-p">14% APY</span><span class="chip chip-g">No Lock</span><span class="chip chip-b">Min $5</span><span class="chip chip-w">Anytime</span></div>
+      </div>
+      <button class="btn btn-purple btn-sm" onclick="openStake('flex')">Start Earning →</button>
+    </div>
+    <div class="sec-hd"><span class="sec-title">Staking Pools</span><span class="sec-meta">5 pools · 14% APY</span></div>
+    <div class="pools-grid">
+      <div class="pcard fpc" onclick="openStake('flex')">
+        <div class="pc-hd"><div class="pc-ico" style="background:rgba(155,89,182,.12)">🔓</div><div><div class="pc-name">Flexible Pool</div><div class="pc-net">BEP20/TRC20</div></div><span class="badge badge-flex" style="margin-left:auto">✦ FLEX</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:11px"><span class="chip chip-g" style="font-size:10px">No Lock</span><span class="chip chip-b" style="font-size:10px">Anytime Withdraw</span><span class="chip chip-p" style="font-size:10px">Daily Rewards</span></div>
+        <div class="pc-stats">
+          <div class="pcs"><div class="pcs-l">APY</div><div class="pcs-v p">14%</div></div>
+          <div class="pcs"><div class="pcs-l">Lock</div><div class="pcs-v g">None ✓</div></div>
+          <div class="pcs"><div class="pcs-l">Min</div><div class="pcs-v">$5</div></div>
+          <div class="pcs"><div class="pcs-l">TVL</div><div class="pcs-v b">$3.2M</div></div>
+        </div>
+        <button class="pbtn pbtn-f">Open Flexible Pool →</button>
+      </div>
+      <div class="pcard" onclick="openStake('u-bep')">
+        <div class="pc-hd"><div class="pc-ico" style="background:rgba(0,200,150,.1)">₮</div><div><div class="pc-name">USDT — BEP20</div><div class="pc-net">Binance Smart Chain</div></div><span class="badge badge-hot" style="margin-left:auto">● HOT</span></div>
+        <div class="pc-stats">
+          <div class="pcs"><div class="pcs-l">APY</div><div class="pcs-v g">14%</div></div>
+          <div class="pcs"><div class="pcs-l">Lock</div><div class="pcs-v">30 Days</div></div>
+          <div class="pcs"><div class="pcs-l">Min</div><div class="pcs-v">$10</div></div>
+          <div class="pcs"><div class="pcs-l">TVL</div><div class="pcs-v b">$2.1M</div></div>
+        </div>
+        <div class="pc-bar"><div class="pc-fill" style="width:72%;background:var(--green)"></div></div>
+        <div class="pc-cap">72% capacity</div>
+        <button class="pbtn pbtn-p">Stake Now →</button>
+      </div>
+      <div class="pcard" onclick="openStake('u-trc')">
+        <div class="pc-hd"><div class="pc-ico" style="background:rgba(235,87,87,.1)">₮</div><div><div class="pc-name">USDT — TRC20</div><div class="pc-net">TRON Network</div></div><span class="badge badge-new" style="margin-left:auto">✦ NEW</span></div>
+        <div class="pc-stats">
+          <div class="pcs"><div class="pcs-l">APY</div><div class="pcs-v g">14%</div></div>
+          <div class="pcs"><div class="pcs-l">Lock</div><div class="pcs-v">60 Days</div></div>
+          <div class="pcs"><div class="pcs-l">Min</div><div class="pcs-v">$25</div></div>
+          <div class="pcs"><div class="pcs-l">TVL</div><div class="pcs-v b">$890K</div></div>
+        </div>
+        <div class="pc-bar"><div class="pc-fill" style="width:45%;background:var(--accent)"></div></div>
+        <div class="pc-cap">45% capacity</div>
+        <button class="pbtn pbtn-p">Stake Now →</button>
+      </div>
+      <div class="pcard" onclick="openStake('bnb')">
+        <div class="pc-hd"><div class="pc-ico" style="background:rgba(242,201,76,.1)">⬡</div><div><div class="pc-name">BNB Vault</div><div class="pc-net">BEP20 · High Yield</div></div><span class="badge badge-stable" style="margin-left:auto">◈ STABLE</span></div>
+        <div class="pc-stats">
+          <div class="pcs"><div class="pcs-l">APY</div><div class="pcs-v g">14%</div></div>
+          <div class="pcs"><div class="pcs-l">Lock</div><div class="pcs-v">90 Days</div></div>
+          <div class="pcs"><div class="pcs-l">Min</div><div class="pcs-v">$50</div></div>
+          <div class="pcs"><div class="pcs-l">TVL</div><div class="pcs-v b">$5.4M</div></div>
+        </div>
+        <div class="pc-bar"><div class="pc-fill" style="width:88%;background:var(--gold)"></div></div>
+        <div class="pc-cap">88% capacity · Nearly full</div>
+        <button class="pbtn pbtn-p">Stake Now →</button>
+      </div>
+      <div class="pcard" onclick="openStake('trx')">
+        <div class="pc-hd"><div class="pc-ico" style="background:rgba(86,204,242,.1)">◈</div><div><div class="pc-name">TRX Elite</div><div class="pc-net">TRC20 · Premium</div></div><span class="badge badge-elite" style="margin-left:auto">★ ELITE</span></div>
+        <div class="pc-stats">
+          <div class="pcs"><div class="pcs-l">APY</div><div class="pcs-v g">14%</div></div>
+          <div class="pcs"><div class="pcs-l">Lock</div><div class="pcs-v">180 Days</div></div>
+          <div class="pcs"><div class="pcs-l">Min</div><div class="pcs-v">$100</div></div>
+          <div class="pcs"><div class="pcs-l">TVL</div><div class="pcs-v b">$1.2M</div></div>
+        </div>
+        <div class="pc-bar"><div class="pc-fill" style="width:33%;background:var(--blue)"></div></div>
+        <div class="pc-cap">33% capacity</div>
+        <button class="pbtn pbtn-p">Stake Now →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEPOSIT -->
+  <div class="sec" id="secDeposit">
+    <div class="sec-hd"><span class="sec-title">Deposit Funds</span></div>
+    <div id="wDepBar" class="ws-bar" style="display:none">
+      <div class="ws-dot"></div>
+      <div class="ws-info"><div class="ws-lbl">Wallet Connected</div><div class="ws-addr" id="wDepAddr">—</div></div>
+    </div>
+    <div class="dw-grid">
+      <div class="panel">
+        <div class="panel-h">Deposit Address</div>
+        <div class="panel-s">Send crypto to fund your account</div>
+        <div class="ntabs">
+          <div class="ntab active" id="ntBEP" onclick="switchNet('BEP20')">BEP20</div>
+          <div class="ntab" id="ntTRC" onclick="switchNet('TRC20')">TRC20</div>
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:7px" id="netLbl">Binance Smart Chain — BEP20</div>
+        <div class="addr-box" id="dAddr" onclick="copyAddr()">0x78209a6b829a82e9d440bad4182b040186f78bff</div>
+        <div class="copy-btn" onclick="copyAddr()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy Address
+        </div>
+        <div style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:18px;margin-bottom:9px;color:var(--text3);font-size:11px;min-height:85px">
+          <div style="font-size:26px">📱</div>Scan with Trust Wallet
+        </div>
+        <div class="warn-box">⚠ Only send <strong id="netNm">BEP20</strong> tokens. Wrong network = lost funds.</div>
+      </div>
+      <div class="panel">
+        <div class="panel-h">Confirm Transaction</div>
+        <div class="panel-s">Already sent? Submit TX hash below</div>
+        <div class="fld"><label>Network</label>
+          <select id="depNet"><option>BEP20 (Binance Smart Chain)</option><option>TRC20 (TRON Network)</option></select>
+        </div>
+        <div class="fld"><label>Amount (USD)</label>
+          <input type="number" id="depAmt" placeholder="Minimum $5">
+          <div class="qrow"><span class="qb" onclick="qi('depAmt',50)">$50</span><span class="qb" onclick="qi('depAmt',100)">$100</span><span class="qb" onclick="qi('depAmt',250)">$250</span><span class="qb" onclick="qi('depAmt',500)">$500</span><span class="qb" onclick="qi('depAmt',1000)">$1K</span></div>
+        </div>
+        <div class="fld"><label>Transaction Hash</label><input type="text" id="depTx" placeholder="0x... or T..."></div>
+        <button class="btn btn-green btn-full" onclick="submitDeposit()">Confirm Deposit</button>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;line-height:2">
+          BEP20: 0x7820...f78bff<br>TRC20: THrB7...ZpGVa<br>Min: $5 · ETA: ~5 min
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WITHDRAW -->
+  <div class="sec" id="secWithdraw">
+    <div class="sec-hd"><span class="sec-title">Withdraw Funds</span></div>
+    <div class="dw-grid">
+      <div class="panel">
+        <div class="panel-h">Withdrawal Request</div>
+        <div class="panel-s">Processed within 24–48 hours</div>
+        <div class="bal-box">
+          <div class="bal-lbl">Available Balance</div>
+          <div class="bal-val">$<span id="avBal">0.00</span></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px;font-family:'JetBrains Mono',monospace">Locked stakes not included</div>
+        </div>
+        <div class="fld"><label>Network</label>
+          <select id="wdNet"><option>BEP20 (Binance Smart Chain)</option><option>TRC20 (TRON Network)</option></select>
+        </div>
+        <div class="fld"><label>Destination Wallet</label>
+          <input type="text" id="wdAddr" placeholder="Your receiving address">
+          <div id="useWBtn" style="display:none;margin-top:5px"><button class="btn btn-outline btn-sm" onclick="useConnWallet()" style="font-size:11px">Use Connected Wallet</button></div>
+        </div>
+        <div class="fld"><label>Amount (USD)</label>
+          <input type="number" id="wdAmt" placeholder="Minimum $10">
+          <div class="qrow"><span class="qb" onclick="qi('wdAmt',25)">$25</span><span class="qb" onclick="qi('wdAmt',50)">$50</span><span class="qb" onclick="qi('wdAmt',100)">$100</span><span class="qb" onclick="setMax()">MAX</span></div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:11px">Fee: 1% · Min: $10</div>
+        <button class="btn btn-red btn-full" onclick="submitWithdraw()">Submit Withdrawal</button>
+      </div>
+      <div class="panel">
+        <div class="panel-h">Withdrawal History</div>
+        <div class="panel-s">Recent withdrawal requests</div>
+        <div id="wdHist" style="color:var(--text3);font-size:13px;text-align:center;padding:36px 0">No withdrawals yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAKES -->
+  <div class="sec" id="secStakes">
+    <div class="sec-hd"><span class="sec-title">My Stakes</span></div>
+    <div id="flexPanel" style="display:none" class="flex-panel">
+      <div class="fp-hd">
+        <div class="sk-ico" style="background:rgba(155,89,182,.12);font-size:15px">🔓</div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--purple)">Flexible Pool</div><div style="font-size:11px;color:var(--text3)">14% APY · No lock · Withdraw anytime</div></div>
+        <div style="text-align:right"><div style="font-size:10px;color:var(--text3)">Staked</div><div style="font-size:19px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--purple)">$<span id="fpStaked">0.00</span></div></div>
+      </div>
+      <div class="fp-grid">
+        <div class="fg"><div class="fg-l">Today Earned</div><div class="fg-v" style="color:var(--green)">$<span id="fpToday">0.0000</span></div></div>
+        <div class="fg"><div class="fg-l">Total Earned</div><div class="fg-v" style="color:var(--green)">$<span id="fpTotal">0.0000</span></div></div>
+        <div class="fg"><div class="fg-l">Daily Rate</div><div class="fg-v" style="color:var(--purple)">0.038%</div></div>
+      </div>
+      <div class="fp-acts">
+        <button class="btn btn-purple btn-sm" style="flex:1" onclick="openFlexAdd()">+ Add More</button>
+        <button class="btn btn-green btn-sm" style="flex:1" onclick="openFlexWd()">Partial Withdraw</button>
+        <button class="btn btn-red btn-sm" style="flex:1" onclick="openFlexWdAll()">Withdraw All</button>
+      </div>
+    </div>
+    <div id="stakesList"><div style="color:var(--text3);font-size:13px;text-align:center;padding:36px 0">No active stakes. <a style="color:var(--accent);cursor:pointer" onclick="showSec('secHome');setNav('home')">Browse pools →</a></div></div>
+  </div>
+
+  <!-- TRANSACTIONS -->
+  <div class="sec" id="secTx">
+    <div class="sec-hd"><span class="sec-title">Transaction History</span></div>
+    <div class="tx-wrap">
+      <div class="tx-th"><span>Transaction</span><span>Amount</span><span>Network</span><span>Date</span><span>Status</span></div>
+      <div id="txList"><div style="color:var(--text3);font-size:13px;text-align:center;padding:36px">No transactions yet</div></div>
+    </div>
+  </div>
+
+  <!-- SUPPORT -->
+  <div class="sec" id="secSupport">
+    <div class="supp-wrap">
+      <div class="supp-hero">
+        <div class="tg-circle">✈</div>
+        <div class="supp-h">24/7 Customer Support</div>
+        <div class="supp-s">Our team is available around the clock. Average response time under 2 minutes.</div>
+        <a href="https://t.me/KeyForgeAi" target="_blank" class="tg-link">Open Telegram — @KeyForgeAi</a>
+        <div class="rs-grid">
+          <div class="rs-item"><div class="rs-val">&lt;2m</div><div class="rs-lbl">Avg Response</div></div>
+          <div class="rs-item"><div class="rs-val">24/7</div><div class="rs-lbl">Available</div></div>
+          <div class="rs-item"><div class="rs-val">99.4%</div><div class="rs-lbl">Satisfaction</div></div>
+        </div>
+      </div>
+      <div class="faq-list">
+        <div class="faq-item" onclick="this.classList.toggle('open')"><div class="faq-q">How does Flexible Pool work?<span class="faq-arr">›</span></div><div class="faq-a">14% APY, no lock. Deposit from $5, withdraw anytime with no penalties. Rewards at 0.038%/day.</div></div>
+        <div class="faq-item" onclick="this.classList.toggle('open')"><div class="faq-q">How to connect Trust Wallet?<span class="faq-arr">›</span></div><div class="faq-a">Click Trust Wallet on login. Mobile: app opens directly. Desktop: WalletConnect QR scan.</div></div>
+        <div class="faq-item" onclick="this.classList.toggle('open')"><div class="faq-q">How long do deposits take?<span class="faq-arr">›</span></div><div class="faq-a">5–15 minutes after network confirmation for BEP20 and TRC20.</div></div>
+        <div class="faq-item" onclick="this.classList.toggle('open')"><div class="faq-q">Early withdrawal from fixed pool?<span class="faq-arr">›</span></div><div class="faq-a">Yes with 5% early exit fee. Use Flexible Pool if you need liquidity.</div></div>
+        <div class="faq-item" onclick="this.classList.toggle('open')"><div class="faq-q">Which networks supported?<span class="faq-arr">›</span></div><div class="faq-a">BEP20 (Binance Smart Chain) and TRC20 (TRON). Always verify network before sending.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="sec" id="secProfile">
+    <div class="sec-hd"><span class="sec-title">Account</span></div>
+    <div id="profWsBar" class="ws-bar" style="display:none">
+      <div class="ws-dot"></div>
+      <div class="ws-info"><div class="ws-lbl">Wallet Connected</div><div class="ws-addr" id="profWsAddr">—</div></div>
+      <div class="ws-disc" onclick="disconnectWallet()">Disconnect</div>
+    </div>
+    <div class="panel" style="margin-bottom:13px">
+      <div class="prof-av" id="profAv" style="background:linear-gradient(135deg,#2d9cdb,#00c896)">?</div>
+      <div style="font-size:17px;font-weight:700" id="profName">—</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:3px" id="profEmail">—</div>
+      <div id="profWAddr" style="font-size:11px;color:var(--purple);margin-top:5px;font-family:'JetBrains Mono',monospace;display:none"></div>
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <span class="chip chip-g">Verified ✓</span><span class="chip chip-b">Active</span>
+        <span id="wChip" style="display:none" class="chip chip-p">🔗 Wallet</span>
+      </div>
+    </div>
+    <div class="panel" style="margin-bottom:13px">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:11px">Summary</div>
+      <div style="display:grid;gap:7px">
+        <div class="kv"><span style="color:var(--text3)">Member Since</span><span id="pSince" style="font-family:'JetBrains Mono',monospace">—</span></div>
+        <div class="kv"><span style="color:var(--text3)">Login Method</span><span id="pMethod" style="font-family:'JetBrains Mono',monospace;color:var(--purple)">—</span></div>
+        <div class="kv"><span style="color:var(--text3)">Total Deposited</span><span id="pDep" style="font-family:'JetBrains Mono',monospace;color:var(--blue)">$0.00</span></div>
+        <div class="kv"><span style="color:var(--text3)">Total Earned</span><span id="pEarned" style="font-family:'JetBrains Mono',monospace;color:var(--green)">$0.00</span></div>
+        <div class="kv"><span style="color:var(--text3)">Available Balance</span><span id="pBal" style="font-family:'JetBrains Mono',monospace;color:var(--gold)">$0.00</span></div>
+      </div>
+    </div>
+    <button class="btn btn-red btn-full" onclick="doLogout()" style="padding:11px">Sign Out</button>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <div class="ni active" id="nav-home" onclick="showSec('secHome');setNav('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</div>
+  <div class="ni" id="nav-deposit" onclick="showSec('secDeposit');setNav('deposit')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>Deposit</div>
+  <div class="ni" id="nav-withdraw" onclick="showSec('secWithdraw');setNav('withdraw')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>Withdraw</div>
+  <div class="ni" id="nav-stakes" onclick="showSec('secStakes');setNav('stakes')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Stakes</div>
+  <div class="ni" id="nav-tx" onclick="showSec('secTx');setNav('tx')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>History</div>
+  <div class="ni" id="nav-profile" onclick="showSec('secProfile');setNav('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Account</div>
+  <div class="ni" id="nav-support" onclick="showSec('secSupport');setNav('support')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Support</div>
+</div>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+<div class="modal-bg hidden" id="stakeModal">
+  <div class="modal">
+    <div class="modal-h">Stake <span id="mCoin">USDT</span></div>
+    <div class="modal-s" id="mInfo">14% APY · 30 Day Lock</div>
+    <div class="fld"><label>Amount (USD)</label>
+      <input type="range" id="sRange" min="10" max="10000" value="100" oninput="updStake()">
+      <input class="amt-inp" type="number" id="sAmt" value="100" oninput="updStake()">
+      <div class="qrow"><span class="qb" onclick="qst(100)">$100</span><span class="qb" onclick="qst(250)">$250</span><span class="qb" onclick="qst(500)">$500</span><span class="qb" onclick="qst(1000)">$1K</span></div>
+    </div>
+    <div class="preview">
+      <div class="pr"><span style="color:var(--text3)">APY</span><span id="pAPY" style="color:var(--green)">14%</span></div>
+      <div class="pr"><span style="color:var(--text3)">Lock Period</span><span id="pDays">30 Days</span></div>
+      <div class="pr"><span style="color:var(--text3)">Expected Return</span><span id="pRet" style="color:var(--green)">$0.00</span></div>
+      <div class="pr"><span>Total at Maturity</span><span id="pTot" style="color:var(--gold)">$0.00</span></div>
+    </div>
+    <div class="mact">
+      <button class="btn btn-outline" onclick="closeM('stakeModal')">Cancel</button>
+      <button class="btn btn-primary" style="flex:2" onclick="confirmStake()">Confirm Stake →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="flexDepModal">
+  <div class="modal">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:19px">🔓</span><div class="modal-h">Flexible Pool</div><span class="badge badge-flex" style="margin-left:auto">14% APY</span></div>
+    <div class="modal-s">No lock · Add/withdraw anytime · Daily rewards</div>
+    <div class="minfo">
+      <div class="mrow"><span style="color:var(--text3)">Currently Staked</span><span style="font-family:'JetBrains Mono',monospace;color:var(--purple)">$<span id="fmStaked">0.00</span></span></div>
+      <div class="mrow"><span style="color:var(--text3)">Wallet Balance</span><span style="font-family:'JetBrains Mono',monospace;color:var(--green)">$<span id="fmBal">0.00</span></span></div>
+    </div>
+    <div class="fld"><label>Deposit Amount</label>
+      <input class="amt-inp" type="number" id="fdAmt" placeholder="Min $5">
+      <div class="qrow"><span class="qb" onclick="qi('fdAmt',10)">$10</span><span class="qb" onclick="qi('fdAmt',25)">$25</span><span class="qb" onclick="qi('fdAmt',50)">$50</span><span class="qb" onclick="qi('fdAmt',100)">$100</span><span class="qb" onclick="qi('fdAmt',S.bal)">MAX</span></div>
+    </div>
+    <div style="background:rgba(0,200,150,.05);border:1px solid rgba(0,200,150,.15);border-radius:7px;padding:10px;margin-bottom:13px;font-size:11px;color:var(--text2);line-height:1.8">✓ Withdraw anytime · No penalties<br>✓ Daily rewards at 0.038%/day</div>
+    <div class="mact">
+      <button class="btn btn-outline" onclick="closeM('flexDepModal')">Cancel</button>
+      <button class="btn btn-purple" style="flex:2" onclick="confirmFlexDep()">Start Earning →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="flexWdModal">
+  <div class="modal">
+    <div class="modal-h">Withdraw from Flexible Pool</div>
+    <div class="modal-s">No penalties. Choose amount to withdraw.</div>
+    <div class="minfo">
+      <div class="mrow"><span style="color:var(--text3)">Flexible Balance</span><span style="font-family:'JetBrains Mono',monospace;color:var(--purple)">$<span id="fwAvail">0.00</span></span></div>
+      <div class="mrow"><span style="color:var(--text3)">Total Earned</span><span style="font-family:'JetBrains Mono',monospace;color:var(--green)">$<span id="fwEarned">0.00</span></span></div>
+    </div>
+    <div class="fld"><label>Withdrawal Amount</label>
+      <input type="range" id="fwRange" min="1" max="100" value="50" oninput="updFW()">
+      <input class="amt-inp" type="number" id="fwAmt" placeholder="Amount" oninput="updFW()">
+      <div class="qrow"><span class="qb" onclick="setFWP(25)">25%</span><span class="qb" onclick="setFWP(50)">50%</span><span class="qb" onclick="setFWP(75)">75%</span><span class="qb" onclick="setFWP(100)">100%</span></div>
+    </div>
+    <div class="fld"><label>Destination Address</label><input type="text" id="fwAddr" placeholder="BEP20 or TRC20 address"></div>
+    <div style="background:var(--bg2);border-radius:7px;padding:9px 12px;margin-bottom:12px;font-size:12px;display:flex;justify-content:space-between">
+      <span style="color:var(--text3)">Remaining in pool</span><span id="fwRemain" style="font-family:'JetBrains Mono',monospace;color:var(--purple)">$0.00</span>
+    </div>
+    <div class="mact">
+      <button class="btn btn-outline" onclick="closeM('flexWdModal')">Cancel</button>
+      <button class="btn btn-green" style="flex:2" onclick="confirmFW()">Withdraw Now →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ADMIN PAGE ===================== -->
+<div id="adminPage">
+  <!-- ADMIN LOGIN -->
+  <div class="adm-login" id="admLogin">
+    <div style="width:100%;max-width:350px">
+      <div style="text-align:center;margin-bottom:22px">
+        <div style="width:48px;height:48px;background:linear-gradient(135deg,#e74c3c,#c0392b);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 13px;font-size:21px">🛡</div>
+        <div style="font-size:21px;font-weight:800;color:var(--text)">Admin Panel</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:3px">YieldVault — Restricted Access</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:15px;padding:24px">
+        <div id="admErr" style="display:none;background:rgba(235,87,87,.08);border:1px solid rgba(235,87,87,.2);border-radius:7px;padding:9px 12px;font-size:12px;color:var(--red);margin-bottom:12px">Invalid credentials. Access denied.</div>
+        <div class="fld"><label>Username</label><input type="text" id="adU" placeholder="Admin username" autocomplete="off"></div>
+        <div class="fld"><label>Password</label><input type="password" id="adP" placeholder="Admin password" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+        <button class="btn btn-admin btn-full" onclick="doAdminLogin()">Access Admin Panel</button>
+        <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--text3)">🔒 All access is logged</div>
+        <div style="text-align:center;margin-top:8px;font-size:11px"><a style="color:var(--accent);cursor:pointer" onclick="goToAuth()">← Back to Platform</a></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN DASHBOARD -->
+  <div class="adm-dash" id="admDash">
+    <div class="adm-nav">
+      <div style="width:26px;height:26px;background:linear-gradient(135deg,#e74c3c,#c0392b);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px">🛡</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text)">YieldVault Admin</div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:9px">
+        <div class="live-pill"><div class="live-dot"></div><div class="live-txt">LIVE</div></div>
+        <span style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace" id="admClock"></span>
+        <a style="font-size:11px;color:var(--accent);cursor:pointer" onclick="goToAuth()">← Platform</a>
+        <button class="nbtn" onclick="doAdminLogout()">Sign Out</button>
+      </div>
+    </div>
+    <div class="adm-tabs">
+      <div class="atab active" id="at-db" onclick="goAdmTab('db')">Dashboard</div>
+      <div class="atab" id="at-users" onclick="goAdmTab('users')">Users <span id="aBu" style="background:var(--accent);color:#fff;font-size:9px;padding:1px 5px;border-radius:6px;margin-left:3px">0</span></div>
+      <div class="atab" id="at-deps" onclick="goAdmTab('deps')">Deposits <span id="aBd" style="background:var(--gold);color:#000;font-size:9px;padding:1px 5px;border-radius:6px;margin-left:3px">0</span></div>
+      <div class="atab" id="at-wds" onclick="goAdmTab('wds')">Withdrawals <span id="aBw" style="background:var(--red);color:#fff;font-size:9px;padding:1px 5px;border-radius:6px;margin-left:3px">0</span></div>
+      <div class="atab" id="at-stk" onclick="goAdmTab('stk')">Stakes</div>
+      <div class="atab" id="at-set" onclick="goAdmTab('set')">Settings</div>
+      <div class="atab" id="at-bcast" onclick="goAdmTab('bcast')">Broadcast</div>
+    </div>
+    <div class="adm-content">
+
+      <!-- DASHBOARD TAB -->
+      <div class="adm-sec on" id="as-db">
+        <div class="adm-stats">
+          <div class="ascard b"><div class="as-lbl">Users</div><div class="as-val b" id="as-users">0</div></div>
+          <div class="ascard g"><div class="as-lbl">Deposits</div><div class="as-val g">$<span id="as-dep">0</span></div></div>
+          <div class="ascard w"><div class="as-lbl">Pending WD</div><div class="as-val w" id="as-wd">0</div></div>
+          <div class="ascard r"><div class="as-lbl">Stakes</div><div class="as-val r" id="as-stk">0</div></div>
+          <div class="ascard p"><div class="as-lbl">TVL</div><div class="as-val p">$354M</div></div>
+          <div class="ascard o"><div class="as-lbl">Revenue</div><div class="as-val o">$<span id="as-rev">0</span></div></div>
+        </div>
+        <div class="tbl-wrap">
+          <div class="tbl-hd"><div class="tbl-h">Pending Deposits — Approve / Reject</div><span id="pendCnt" class="apill apill-y">0 pending</span></div>
+          <div class="tscroll">
+            <table><thead><tr><th>User</th><th>Amount</th><th>Network</th><th>TX Hash</th><th>Action</th></tr></thead>
+            <tbody id="pendDepTbl"><tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">No pending deposits</td></tr></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- USERS TAB -->
+      <div class="adm-sec" id="as-users">
+        <div class="srch-row">
+          <input class="srch" placeholder="Search name or email..." oninput="renderUsers(this.value)">
+          <select class="fsel" id="uFil" onchange="renderUsers('')"><option value="all">All</option><option value="active">Active</option><option value="suspended">Suspended</option></select>
+          <button class="btn btn-outline btn-sm" onclick="openAModal('addUser')">+ Add User</button>
+        </div>
+        <div class="tbl-wrap">
+          <div class="tbl-hd"><div class="tbl-h">Users</div><div class="tbl-s" id="uCount">0</div></div>
+          <div class="tscroll"><table><thead><tr><th>Name</th><th>Email</th><th>Balance</th><th>Deposited</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="uTbl"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">No users</td></tr></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- DEPOSITS TAB -->
+      <div class="adm-sec" id="as-deps">
+        <div class="srch-row">
+          <input class="srch" placeholder="Search deposits..." oninput="renderDeps(this.value)">
+          <select class="fsel" id="dFil" onchange="renderDeps('')"><option value="all">All</option><option value="pending">Pending</option><option value="approved">Approved</option></select>
+        </div>
+        <div class="tbl-wrap">
+          <div class="tbl-hd"><div class="tbl-h">All Deposits</div><div class="tbl-s" id="dCount">0</div></div>
+          <div class="tscroll"><table><thead><tr><th>User</th><th>Amount</th><th>Network</th><th>TX Hash</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="dTbl"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">No deposits</td></tr></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- WITHDRAWALS TAB -->
+      <div class="adm-sec" id="as-wds">
+        <div class="tbl-wrap">
+          <div class="tbl-hd"><div class="tbl-h">Withdrawal Requests</div><div class="tbl-s" id="wdCount">0</div></div>
+          <div class="tscroll"><table><thead><tr><th>User</th><th>Amount</th><th>Network</th><th>Wallet Address</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="wdTbl"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">No requests</td></tr></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- STAKES TAB -->
+      <div class="adm-sec" id="as-stk">
+        <div class="tbl-wrap">
+          <div class="tbl-hd"><div class="tbl-h">All Stakes</div></div>
+          <div class="tscroll"><table><thead><tr><th>User</th><th>Pool</th><th>Amount</th><th>Network</th><th>Date</th><th>Status</th></tr></thead>
+          <tbody id="stkTbl"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">No stakes</td></tr></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- SETTINGS TAB -->
+      <div class="adm-sec" id="as-set">
+        <div class="tbl-wrap" style="padding:16px 20px">
+          <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:16px">Platform Settings</div>
+          <div class="set-row"><div><div class="sr-lbl">Deposits Enabled</div><div class="sr-sub">Allow users to submit deposits</div></div><div class="toggle on" id="tog-dep" onclick="admToggle('dep')"><div class="tknob"></div></div></div>
+          <div class="set-row"><div><div class="sr-lbl">Withdrawals Enabled</div><div class="sr-sub">Allow withdrawal requests</div></div><div class="toggle on" id="tog-wd" onclick="admToggle('wd')"><div class="tknob"></div></div></div>
+          <div class="set-row"><div><div class="sr-lbl">Flexible Pool Active</div><div class="sr-sub">Enable flexible staking</div></div><div class="toggle on" id="tog-flex" onclick="admToggle('flex')"><div class="tknob"></div></div></div>
+          <div class="set-row"><div><div class="sr-lbl">Global APY Rate</div><div class="sr-sub">Annual yield all pools</div></div><div class="ie"><span class="ie-val" id="apyVal">14%</span><button class="abtn abtn-y" onclick="openEditModal('apy','APY Rate','14%')">Edit</button></div></div>
+          <div class="set-row"><div><div class="sr-lbl">Withdrawal Fee</div><div class="sr-sub">Fee on withdrawals</div></div><div class="ie"><span class="ie-val" id="feeVal">1%</span><button class="abtn abtn-y" onclick="openEditModal('fee','Withdrawal Fee','1%')">Edit</button></div></div>
+          <div class="set-row"><div><div class="sr-lbl">BEP20 Address</div><div class="sr-sub mono" id="bep20Show">0x7820...f78bff</div></div><button class="abtn abtn-b" onclick="openEditModal('bep20','BEP20 Address','0x78209a6b829a82e9d440bad4182b040186f78bff')">Edit</button></div>
+          <div class="set-row"><div><div class="sr-lbl">TRC20 Address</div><div class="sr-sub mono" id="trc20Show">THrB7...ZpGVa</div></div><button class="abtn abtn-b" onclick="openEditModal('trc20','TRC20 Address','THrB7Yr4CCeqNTCSWvgFESbj9FWAeZpGVa')">Edit</button></div>
+        </div>
+      </div>
+
+      <!-- BROADCAST TAB -->
+      <div class="adm-sec" id="as-bcast">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:13px;padding:20px;max-width:500px;margin-bottom:13px">
+          <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:5px">Send Announcement</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:15px">Notify all users or a specific user</div>
+          <div class="fld"><label>Target</label><select id="bcTgt" onchange="document.getElementById('bcUF').style.display=this.value==='single'?'block':'none'"><option value="all">All Users</option><option value="single">Specific User</option></select></div>
+          <div class="fld" id="bcUF" style="display:none"><label>User Email</label><input type="email" id="bcUE" placeholder="user@email.com"></div>
+          <div class="fld"><label>Type</label><select id="bcType"><option>📢 Announcement</option><option>✅ Deposit Confirmed</option><option>💸 Withdrawal Processed</option><option>🎁 Bonus Reward</option><option>⚙ Maintenance</option></select></div>
+          <div class="fld"><label>Message</label><textarea id="bcMsg" placeholder="Enter message..."></textarea></div>
+          <button class="btn btn-primary btn-full" onclick="sendBcast()">Send Message</button>
+        </div>
+        <div class="tbl-wrap">
+          <div class="tbl-hd"><div class="tbl-h">Message Log</div></div>
+          <div style="padding:0 16px" id="bcLog"><div style="color:var(--text3);font-size:12px;text-align:center;padding:24px">No messages sent</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN MODALS -->
+<div class="amodal-bg" id="addUserModal">
+  <div class="amodal">
+    <div class="am-h">Add New User</div>
+    <div class="am-s">Manually create user account</div>
+    <div class="fld"><label>Full Name</label><input type="text" id="auN" placeholder="John Doe"></div>
+    <div class="fld"><label>Email</label><input type="email" id="auE" placeholder="user@email.com"></div>
+    <div class="fld"><label>Initial Balance (USD)</label><input type="number" id="auB" value="0"></div>
+    <div class="am-acts">
+      <button class="btn btn-outline" onclick="closeAModal('addUser')">Cancel</button>
+      <button class="btn btn-green" onclick="doAddUser()">Create Account</button>
+    </div>
+  </div>
+</div>
+<div class="amodal-bg" id="editValModal">
+  <div class="amodal">
+    <div class="am-h" id="evTitle">Edit Value</div>
+    <div class="am-s" id="evSub">Update setting</div>
+    <div class="fld"><label id="evLbl">Value</label><input type="text" id="evInput"></div>
+    <div class="am-acts">
+      <button class="btn btn-outline" onclick="closeAModal('editVal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditVal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let S={user:null,dep:0,earned:0,bal:0,txs:[],stakes:[],flex:{staked:0,earned:0},wallet:null};
+let AD={users:[],deposits:[],withdrawals:[],stakes:[],settings:{dep:true,wd:true,flex:true,apy:'14%',fee:'1%',bep20:'0x78209a6b829a82e9d440bad4182b040186f78bff',trc20:'THrB7Yr4CCeqNTCSWvgFESbj9FWAeZpGVa'}};
+let curPool=null;let authMode='login';let evKey=null;
+
+const POOLS={'flex':{coin:'Flexible Pool',apy:14,days:0,min:5,net:'BEP20/TRC20',flex:true},'u-bep':{coin:'USDT (BEP20)',apy:14,days:30,min:10,net:'BEP20'},'u-trc':{coin:'USDT (TRC20)',apy:14,days:60,min:25,net:'TRC20'},'bnb':{coin:'BNB',apy:14,days:90,min:50,net:'BEP20'},'trx':{coin:'TRX',apy:14,days:180,min:100,net:'TRC20'}};
+const ADDRS={BEP20:'0x78209a6b829a82e9d440bad4182b040186f78bff',TRC20:'THrB7Yr4CCeqNTCSWvgFESbj9FWAeZpGVa'};
+const ADMIN_CREDS={u:'Hassan1214',p:'H@ssan1214'};
+
+function saveS(){localStorage.setItem('yv_s',JSON.stringify({dep:S.dep,earned:S.earned,bal:S.bal,txs:S.txs,stakes:S.stakes,flex:S.flex,wallet:S.wallet}))}
+function loadS(){try{const d=localStorage.getItem('yv_s');if(d)Object.assign(S,JSON.parse(d))}catch{}}
+function saveAD(){localStorage.setItem('yv_ad',JSON.stringify(AD))}
+function loadAD(){try{const d=localStorage.getItem('yv_ad');if(d)Object.assign(AD,JSON.parse(d))}catch{}}
+function syncToAD(){
+  if(!S.user)return;
+  const idx=AD.users.findIndex(u=>u.email===S.user.email);
+  const ud={id:S.user.email,name:S.user.name,email:S.user.email,balance:S.bal,deposited:S.dep,earned:S.earned,status:'active',joined:localStorage.getItem('yv_joined')||new Date().toLocaleDateString()};
+  if(idx>=0)AD.users[idx]={...AD.users[idx],...ud};else AD.users.push(ud);
+  S.txs.forEach(tx=>{
+    if((tx.type==='Deposit'||tx.type==='Flex Stake')&&!AD.deposits.find(x=>x.id===tx.id))AD.deposits.push({...tx,user:S.user.name,email:S.user.email});
+    if((tx.type==='Withdrawal'||tx.type==='Flex Withdraw')&&!AD.withdrawals.find(x=>x.id===tx.id))AD.withdrawals.push({...tx,user:S.user.name,email:S.user.email});
+    if(tx.type==='Stake'&&!AD.stakes.find(x=>x.id===tx.id))AD.stakes.push({...tx,user:S.user.name,email:S.user.email});
+  });
+  saveAD();
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg,type=''){
+  const el=document.createElement('div');
+  el.className='ti'+(type?' '+type:'');
+  el.innerHTML='<div class="ti-dot"></div><span>'+msg+'</span>';
+  document.getElementById('toast').appendChild(el);
+  setTimeout(()=>el.remove(),3800);
+}
+
+// ============================================================
+// PAGE / SECTION SYSTEM
+// ============================================================
+function showPg(id){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  const el=document.getElementById(id);
+  if(el)el.classList.add('on');
+}
+const SECS=['secHome','secDeposit','secWithdraw','secStakes','secTx','secSupport','secProfile'];
+function showSec(id){SECS.forEach(s=>{const el=document.getElementById(s);if(el)el.classList.toggle('on',s===id)})}
+function setNav(k){document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));const el=document.getElementById('nav-'+k);if(el)el.classList.add('active')}
+function closeM(id){document.getElementById(id).classList.add('hidden')}
+function qi(id,v){document.getElementById(id).value=v}
+function setMax(){document.getElementById('wdAmt').value=S.bal.toFixed(2)}
+
+// ============================================================
+// AUTH
+// ============================================================
+function toggleAuth(){
+  authMode=authMode==='login'?'reg':'login';
+  document.getElementById('aBtnTxt').textContent=authMode==='login'?'Sign In':'Create Account';
+  document.getElementById('aSW').textContent=authMode==='login'?'New to YieldVault?':'Already have an account?';
+  document.querySelector('.auth-sw a').textContent=authMode==='login'?'Create account':'Sign in';
+  document.getElementById('aNameFld').style.display=authMode==='reg'?'block':'none';
+}
+function doAuth(){
+  const email=document.getElementById('aEmail').value.trim();
+  const pass=document.getElementById('aPass').value;
+  const name=document.getElementById('aName').value.trim();
+  if(!email||!pass){toast('Email and password required','err');return}
+  if(!email.includes('@')){toast('Invalid email','err');return}
+  if(pass.length<6){toast('Password min 6 characters','err');return}
+  const uname=authMode==='reg'?(name||email.split('@')[0]):(localStorage.getItem('yv_name')||email.split('@')[0]);
+  localStorage.setItem('yv_email',email);localStorage.setItem('yv_name',uname);
+  if(!localStorage.getItem('yv_joined'))localStorage.setItem('yv_joined',new Date().toLocaleDateString());
+  loadS();loginUser(uname,email,'Email');
+  toast(authMode==='reg'?'Account created! Welcome 🎉':'Welcome back!','ok');
+}
+
+// WALLET CONNECT
+function connectWallet(type){
+  const wid='wopt-'+type;const aid='wa-'+type;
+  document.getElementById(wid).classList.add('connecting');
+  document.getElementById(aid).textContent='⏳';
+  toast('Connecting '+(type==='trust'?'Trust Wallet':type==='mm'?'MetaMask':'WalletConnect')+'...','warn');
+  setTimeout(async()=>{
+    if(type==='mm'){
+      if(typeof window.ethereum!=='undefined'){
+        try{
+          const accs=await window.ethereum.request({method:'eth_requestAccounts'});
+          if(accs.length>0){onWalletConn(accs[0],'MetaMask',type);return}
+        }catch(e){
+          document.getElementById(wid).classList.remove('connecting');
+          document.getElementById(aid).textContent='›';
+          toast(e.code===4001?'MetaMask rejected':'MetaMask error: '+e.message,'err');return;
+        }
+      } else {
+        document.getElementById(wid).classList.remove('connecting');
+        document.getElementById(aid).textContent='›';
+        toast('MetaMask not installed. Please install it first.','err');
+        window.open('https://metamask.io','_blank');return;
+      }
+    }
+    // Simulate for trust/wc (real WalletConnect needs backend)
+    const mockAddr='0x'+Array.from({length:40},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
+    onWalletConn(mockAddr,type==='trust'?'Trust Wallet':'WalletConnect',type);
+  },1200);
+}
+function onWalletConn(addr,walletName,type){
+  const wid='wopt-'+type;const aid='wa-'+type;
+  document.getElementById(wid).classList.remove('connecting');
+  document.getElementById(wid).classList.add('connected');
+  document.getElementById(aid).textContent='✓';
+  S.wallet={type:walletName,address:addr,connected:true};
+  const email=addr.slice(0,10).toLowerCase()+'@wallet.web3';
+  const name=walletName+' User';
+  localStorage.setItem('yv_email',email);localStorage.setItem('yv_name',name);
+  if(!localStorage.getItem('yv_joined'))localStorage.setItem('yv_joined',new Date().toLocaleDateString());
+  loadS();S.wallet={type:walletName,address:addr,connected:true};
+  loginUser(name,email,walletName);
+  toast(walletName+' connected: '+addr.slice(0,8)+'...'+addr.slice(-4),'ok');
+}
+function disconnectWallet(){
+  S.wallet=null;
+  document.querySelectorAll('.wopt').forEach(w=>{w.classList.remove('connected','connecting')});
+  ['wa-trust','wa-mm','wa-wc'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='›'});
+  toast('Wallet disconnected');doLogout();
+}
+function useConnWallet(){if(S.wallet){document.getElementById('wdAddr').value=S.wallet.address;toast('Wallet address filled','ok')}}
+
+// LOGIN / LOGOUT
+function loginUser(name,email,method){
+  S.user={name,email,method};
+  document.getElementById('profAv').textContent=name[0].toUpperCase();
+  document.getElementById('profName').textContent=name;
+  document.getElementById('profEmail').textContent=email;
+  document.getElementById('pSince').textContent=localStorage.getItem('yv_joined')||'Today';
+  document.getElementById('pMethod').textContent=method||'Email';
+  if(S.wallet){
+    const short=S.wallet.address.slice(0,8)+'...'+S.wallet.address.slice(-4);
+    document.getElementById('wbadge').style.display='flex';
+    document.getElementById('wshort').textContent=short;
+    document.getElementById('profWAddr').style.display='block';
+    document.getElementById('profWAddr').textContent=S.wallet.address;
+    document.getElementById('wChip').style.display='inline-flex';
+    document.getElementById('profWsBar').style.display='flex';
+    document.getElementById('profWsAddr').textContent=S.wallet.address;
+    document.getElementById('wDepBar').style.display='flex';
+    document.getElementById('wDepAddr').textContent=S.wallet.address;
+    document.getElementById('useWBtn').style.display='block';
+  }
+  updateUI();initFeed();fetchPrices();showPg('mainPage');
+}
+function doLogout(){
+  syncToAD();saveS();S.user=null;S.wallet=null;
+  document.getElementById('wbadge').style.display='none';
+  document.getElementById('profWsBar').style.display='none';
+  document.getElementById('wDepBar').style.display='none';
+  document.getElementById('useWBtn').style.display='none';
+  document.getElementById('wChip').style.display='none';
+  document.getElementById('profWAddr').style.display='none';
+  showPg('authPage');toast('Signed out');
+}
+function goToAuth(){
+  document.getElementById('adminPage').style.display='none';
+  showPg(S.user?'mainPage':'authPage');
+}
+
+// ============================================================
+// UI UPDATE
+// ============================================================
+function updateUI(){
+  const ae=(S.earned+(S.flex.earned||0));
+  ['sDep','sEarned','sBal','sStakes','avBal','pDep','pEarned','pBal'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    if(id==='sDep')el.textContent=S.dep.toFixed(2);
+    else if(id==='sEarned')el.textContent=ae.toFixed(2);
+    else if(id==='sBal'||id==='avBal')el.textContent=S.bal.toFixed(2);
+    else if(id==='sStakes')el.textContent=S.stakes.filter(x=>x.active).length+(S.flex.staked>0?1:0);
+    else if(id==='pDep')el.textContent='$'+S.dep.toFixed(2);
+    else if(id==='pEarned')el.textContent='$'+ae.toFixed(2);
+    else if(id==='pBal')el.textContent='$'+S.bal.toFixed(2);
+  });
+  updFlexPanel();renderStakes();renderTx();saveS();syncToAD();
+}
+
+// ============================================================
+// BINANCE LIVE PRICES
+// ============================================================
+async function fetchPrices(){
+  try{
+    const r=await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT","BNBUSDT","TRXUSDT"]');
+    if(!r.ok)throw new Error();
+    const data=await r.json();
+    data.forEach(t=>{
+      const sym=t.symbol.replace('USDT','').toLowerCase();
+      const p=parseFloat(t.lastPrice);
+      const c=parseFloat(t.priceChangePercent);
+      const pe=document.getElementById('t-'+sym);
+      const ce=document.getElementById('tc-'+sym);
+      if(pe)pe.textContent='$'+(p>100?p.toFixed(2):p>1?p.toFixed(4):p.toFixed(5));
+      if(ce){ce.textContent=(c>=0?'+':'')+c.toFixed(2)+'%';ce.className='tc '+(c>=0?'up':'dn')}
+    });
+  }catch{
+    const fb={btc:'$104,520',eth:'$3,840',bnb:'$609',trx:'$0.2481'};
+    Object.entries(fb).forEach(([k,v])=>{const el=document.getElementById('t-'+k);if(el&&el.textContent==='Loading...')el.textContent=v});
+  }
+  setTimeout(fetchPrices,30000);
+}
+
+// ============================================================
+// LIVE FEED
+// ============================================================
+const FU=['Alex M.','David K.','Sarah T.','Michael R.','Priya S.','James L.','Anna B.','Omar H.','Liu W.','Carlos M.','Nina P.','Hassan A.'];
+const FP=['Flexible Pool','USDT BEP20','USDT TRC20','BNB Vault','TRX Elite'];
+const FA=[250,500,1000,1500,2000,750,300,2500,5000,3000,1200,800];
+const FC=['linear-gradient(135deg,#2d9cdb,#6c63ff)','linear-gradient(135deg,#00c896,#0088cc)','linear-gradient(135deg,#9b59b6,#2d9cdb)','linear-gradient(135deg,#f2c94c,#e67e22)'];
+function makeFI(){
+  const u=FU[Math.floor(Math.random()*FU.length)];const p=FP[Math.floor(Math.random()*FP.length)];
+  const a=FA[Math.floor(Math.random()*FA.length)];const c=FC[Math.floor(Math.random()*FC.length)];
+  const m=Math.floor(Math.random()*8)+1;
+  const el=document.createElement('div');el.className='fi';
+  el.innerHTML='<div class="fav" style="background:'+c+'">'+u.split(' ').map(x=>x[0]).join('')+'</div><div class="finfo"><div class="fuser">'+u+'</div><div class="fdet">Staked in '+p+'</div></div><div class="famt">+$'+a.toLocaleString()+'</div><div class="ftm">'+m+'m ago</div>';
+  return el;
+}
+function initFeed(){
+  const fl=document.getElementById('feedList');if(!fl)return;fl.innerHTML='';
+  for(let i=0;i<5;i++)fl.appendChild(makeFI());
+  setInterval(()=>{const fl=document.getElementById('feedList');if(!fl)return;if(fl.children.length>=6)fl.removeChild(fl.lastChild);fl.insertBefore(makeFI(),fl.firstChild)},4000);
+}
+
+// ============================================================
+// DEPOSIT / WITHDRAW
+// ============================================================
+function switchNet(n){
+  document.getElementById('dAddr').textContent=ADDRS[n];
+  document.getElementById('netLbl').textContent=n==='BEP20'?'Binance Smart Chain — BEP20':'TRON Network — TRC20';
+  document.getElementById('netNm').textContent=n;
+  document.getElementById('ntBEP').classList.toggle('active',n==='BEP20');
+  document.getElementById('ntTRC').classList.toggle('active',n==='TRC20');
+}
+function copyAddr(){
+  navigator.clipboard.writeText(document.getElementById('dAddr').textContent.trim()).then(()=>toast('Address copied!','ok')).catch(()=>toast('Copy manually'));
+}
+function submitDeposit(){
+  const amt=parseFloat(document.getElementById('depAmt').value);
+  const tx=document.getElementById('depTx').value.trim();
+  const net=document.getElementById('depNet').value;
+  if(!amt||amt<5){toast('Minimum deposit is $5','err');return}
+  if(!tx){toast('Enter transaction hash','err');return}
+  const item={id:Date.now(),type:'Deposit',amount:amt,network:net.includes('BEP')?'BEP20':'TRC20',tx,date:new Date().toLocaleDateString(),status:'pending'};
+  S.txs.unshift(item);S.dep+=amt;S.bal+=amt;
+  document.getElementById('depAmt').value='';document.getElementById('depTx').value='';
+  updateUI();toast('$'+amt.toLocaleString()+' deposit submitted — pending confirmation','ok');
+}
+function submitWithdraw(){
+  const amt=parseFloat(document.getElementById('wdAmt').value);
+  const addr=document.getElementById('wdAddr').value.trim();
+  const net=document.getElementById('wdNet').value;
+  if(!amt||amt<10){toast('Minimum withdrawal is $10','err');return}
+  if(!addr){toast('Enter wallet address','err');return}
+  if(amt>S.bal){toast('Insufficient balance','err');return}
+  S.bal-=amt;
+  S.txs.unshift({id:Date.now(),type:'Withdrawal',amount:amt,network:net.includes('BEP')?'BEP20':'TRC20',tx:addr.slice(0,14)+'...',date:new Date().toLocaleDateString(),status:'pending'});
+  const h=document.getElementById('wdHist');
+  const row=document.createElement('div');row.style.cssText='padding:9px 0;border-bottom:1px solid rgba(148,210,255,.04)';
+  row.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:var(--blue)">$'+amt.toFixed(2)+' → '+addr.slice(0,20)+'...</div><div style="font-size:10px;color:var(--text3);margin-top:2px">'+(net.includes('BEP')?'BEP20':'TRC20')+' · '+new Date().toLocaleDateString()+' · <span style="color:var(--gold)">Processing 24-48h</span></div>';
+  if(h.textContent.includes('No withdrawal'))h.innerHTML='';
+  h.prepend(row);
+  document.getElementById('wdAmt').value='';document.getElementById('wdAddr').value='';
+  updateUI();toast('$'+amt.toLocaleString()+' withdrawal submitted','ok');
+}
+
+// ============================================================
+// STAKING
+// ============================================================
+function openStake(key){
+  if(key==='flex'){
+    document.getElementById('fmStaked').textContent=S.flex.staked.toFixed(2);
+    document.getElementById('fmBal').textContent=S.bal.toFixed(2);
+    document.getElementById('fdAmt').value='';
+    document.getElementById('flexDepModal').classList.remove('hidden');return;
+  }
+  curPool={...POOLS[key],key};
+  document.getElementById('mCoin').textContent=curPool.coin;
+  document.getElementById('mInfo').textContent=curPool.apy+'% APY · '+curPool.days+' Day Lock · Min $'+curPool.min;
+  document.getElementById('pAPY').textContent=curPool.apy+'%';
+  document.getElementById('pDays').textContent=curPool.days+' Days';
+  document.getElementById('sAmt').value=curPool.min;
+  document.getElementById('sRange').min=curPool.min;
+  document.getElementById('sRange').value=curPool.min;
+  updStake();document.getElementById('stakeModal').classList.remove('hidden');
+}
+function qst(v){document.getElementById('sAmt').value=v;document.getElementById('sRange').value=Math.min(v,10000);updStake()}
+function updStake(){
+  const a=parseFloat(document.getElementById('sAmt').value)||0;
+  document.getElementById('sRange').value=Math.min(a,10000);
+  if(!curPool)return;
+  const r=a*(curPool.apy/100)*(curPool.days/365);
+  document.getElementById('pRet').textContent='$'+r.toFixed(2);
+  document.getElementById('pTot').textContent='$'+(a+r).toFixed(2);
+}
+function confirmStake(){
+  const a=parseFloat(document.getElementById('sAmt').value);
+  if(!a||a<curPool.min){toast('Minimum is $'+curPool.min,'err');return}
+  if(a>S.bal){toast('Insufficient balance — deposit first','err');return}
+  const r=a*(curPool.apy/100)*(curPool.days/365);
+  S.stakes.unshift({id:Date.now(),coin:curPool.coin,apy:curPool.apy,days:curPool.days,amount:a,expectedReturn:r,start:new Date().toLocaleDateString(),end:new Date(Date.now()+curPool.days*86400000).toLocaleDateString(),active:true,net:curPool.net});
+  S.txs.unshift({id:Date.now(),type:'Stake',amount:a,network:curPool.net,tx:'STAKE-'+Date.now(),date:new Date().toLocaleDateString(),status:'completed'});
+  S.bal-=a;S.earned+=r;closeM('stakeModal');
+  updateUI();toast('$'+a.toLocaleString()+' staked! Expected +$'+r.toFixed(2)+' 🚀','ok');
+  showSec('secStakes');setNav('stakes');
+}
+
+// FLEX POOL
+function confirmFlexDep(){
+  const a=parseFloat(document.getElementById('fdAmt').value);
+  if(!a||a<5){toast('Minimum is $5','err');return}
+  if(a>S.bal){toast('Insufficient balance','err');return}
+  S.bal-=a;S.flex.staked=(S.flex.staked||0)+a;
+  S.flex.earned=(S.flex.earned||0)+a*(0.14/365);
+  S.txs.unshift({id:Date.now(),type:'Flex Stake',amount:a,network:'BEP20/TRC20',tx:'FLEX-'+Date.now(),date:new Date().toLocaleDateString(),status:'completed'});
+  closeM('flexDepModal');updateUI();
+  toast('$'+a.toLocaleString()+' added to Flexible Pool! 📈','ok');
+  showSec('secStakes');setNav('stakes');
+}
+function updFlexPanel(){
+  const has=S.flex.staked>0;
+  document.getElementById('flexPanel').style.display=has?'block':'none';
+  if(has){
+    document.getElementById('fpStaked').textContent=S.flex.staked.toFixed(2);
+    document.getElementById('fpToday').textContent=(S.flex.staked*(0.14/365)).toFixed(4);
+    document.getElementById('fpTotal').textContent=(S.flex.earned||0).toFixed(4);
+  }
+}
+function openFlexAdd(){document.getElementById('fmStaked').textContent=S.flex.staked.toFixed(2);document.getElementById('fmBal').textContent=S.bal.toFixed(2);document.getElementById('fdAmt').value='';document.getElementById('flexDepModal').classList.remove('hidden')}
+function openFlexWd(){
+  document.getElementById('fwAvail').textContent=S.flex.staked.toFixed(2);
+  document.getElementById('fwEarned').textContent=(S.flex.earned||0).toFixed(4);
+  document.getElementById('fwRange').max=S.flex.staked;
+  document.getElementById('fwRange').value=50;
+  document.getElementById('fwAmt').value=(S.flex.staked/2).toFixed(2);
+  updFW();document.getElementById('flexWdModal').classList.remove('hidden');
+}
+function openFlexWdAll(){
+  if(!S.flex.staked){toast('No flexible balance','err');return}
+  document.getElementById('fwAvail').textContent=S.flex.staked.toFixed(2);
+  document.getElementById('fwEarned').textContent=(S.flex.earned||0).toFixed(4);
+  document.getElementById('fwRange').max=S.flex.staked;
+  document.getElementById('fwRange').value=100;
+  document.getElementById('fwAmt').value=S.flex.staked.toFixed(2);
+  updFW();document.getElementById('flexWdModal').classList.remove('hidden');
+}
+function updFW(){
+  const a=parseFloat(document.getElementById('fwAmt').value)||0;
+  document.getElementById('fwRemain').textContent='$'+Math.max(0,S.flex.staked-a).toFixed(2);
+  if(S.flex.staked>0)document.getElementById('fwRange').value=(a/S.flex.staked*100);
+}
+function setFWP(p){const v=(S.flex.staked*(p/100)).toFixed(2);document.getElementById('fwAmt').value=v;document.getElementById('fwRange').value=p;updFW()}
+function confirmFW(){
+  const a=parseFloat(document.getElementById('fwAmt').value);
+  const addr=document.getElementById('fwAddr').value.trim();
+  if(!a||a<1){toast('Enter valid amount','err');return}
+  if(!addr){toast('Enter wallet address','err');return}
+  if(a>S.flex.staked){toast('Exceeds flexible balance','err');return}
+  S.flex.staked-=a;S.bal+=a;if(S.flex.staked<0.01)S.flex.staked=0;
+  S.txs.unshift({id:Date.now(),type:'Flex Withdraw',amount:a,network:'BEP20/TRC20',tx:addr.slice(0,14)+'...',date:new Date().toLocaleDateString(),status:'pending'});
+  closeM('flexWdModal');updateUI();toast('$'+a.toFixed(2)+' withdrawal submitted ✓','ok');
+}
+
+// ============================================================
+// RENDER TX / STAKES
+// ============================================================
+const TI={'Deposit':'↓','Withdrawal':'↑','Stake':'⬡','Flex Stake':'🔓','Flex Withdraw':'↑'};
+const TC={'Deposit':'var(--green)','Withdrawal':'var(--red)','Stake':'var(--blue)','Flex Stake':'var(--purple)','Flex Withdraw':'var(--red)'};
+function renderTx(){
+  const w=document.getElementById('txList');
+  if(!S.txs.length){w.innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:36px">No transactions yet</div>';return}
+  w.innerHTML=S.txs.slice(0,30).map(t=>'<div class="tx-row"><div class="tx-tc"><div class="tx-ico" style="background:rgba(45,156,219,.07);color:'+(TC[t.type]||'var(--text)')+';">'+(TI[t.type]||'•')+'</div><span>'+t.type+'</span></div><div style="font-family:\'JetBrains Mono\',monospace;font-weight:600;color:'+(TC[t.type]||'var(--text)')+';">'+(t.type.includes('Withdraw')||t.type==='Withdrawal'?'-':'+')+' $'+t.amount.toFixed(2)+'</div><div style="font-size:11px;color:var(--text3);font-family:\'JetBrains Mono\',monospace">'+t.network+'</div><div style="font-size:11px;color:var(--text3)">'+t.date+'</div><div><span class="spill '+(t.status==='completed'?'s-ok':'s-pend')+'">'+( t.status==='completed'?'✓ Done':'⏳ Pending')+'</span></div></div>').join('');
+}
+function renderStakes(){
+  const w=document.getElementById('stakesList');
+  const active=S.stakes.filter(x=>x.active);
+  if(!active.length){w.innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:32px 0">No fixed stakes. <a style="color:var(--accent);cursor:pointer" onclick="showSec(\'secHome\');setNav(\'home\')">Browse pools →</a></div>';return}
+  w.innerHTML=active.map(s=>'<div class="stake-card"><div class="sk-l"><div class="sk-ico" style="background:rgba(45,156,219,.1)">₮</div><div><div style="font-weight:600;font-size:13px">'+s.coin+'</div><div style="font-size:10px;color:var(--text3);font-family:\'JetBrains Mono\',monospace">'+s.apy+'% APY · '+s.days+'d</div></div></div><div class="sk-vals"><div><div class="sv-l">Staked</div><div class="sv-v" style="color:var(--blue)">$'+s.amount.toFixed(2)+'</div></div><div><div class="sv-l">Expected</div><div class="sv-v" style="color:var(--green)">+$'+s.expectedReturn.toFixed(2)+'</div></div><div><div class="sv-l">Matures</div><div class="sv-v">'+s.end+'</div></div></div><span class="chip chip-g">Active</span></div>').join('');
+}
+
+// ============================================================
+// ADMIN
+// ============================================================
+function doAdminLogin(){
+  const u=document.getElementById('adU').value.trim();
+  const p=document.getElementById('adP').value;
+  if(u===ADMIN_CREDS.u&&p===ADMIN_CREDS.p){
+    loadAD();
+    document.getElementById('admLogin').style.display='none';
+    document.getElementById('admDash').style.display='block';
+    updateAdmStats();renderPendingDeps();startAdmClock();
+    toast('Welcome Hassan! 🛡','ok');
+  }else{
+    document.getElementById('admErr').style.display='block';
+    document.getElementById('adP').value='';
+    setTimeout(()=>document.getElementById('admErr').style.display='none',3000);
+  }
+}
+function doAdminLogout(){
+  document.getElementById('admDash').style.display='none';
+  document.getElementById('admLogin').style.display='flex';
+  document.getElementById('adU').value='';document.getElementById('adP').value='';
+  toast('Admin signed out');
+}
+function startAdmClock(){function t(){const e=document.getElementById('admClock');if(e)e.textContent=new Date().toLocaleTimeString()}t();setInterval(t,1000)}
+
+function goAdmTab(id){
+  document.querySelectorAll('.adm-sec').forEach(s=>s.classList.remove('on'));
+  document.getElementById('as-'+id).classList.add('on');
+  document.querySelectorAll('.atab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('at-'+id).classList.add('active');
+  if(id==='users')renderUsers('');
+  if(id==='deps')renderDeps('');
+  if(id==='wds')renderWds();
+  if(id==='stk')renderStk();
+}
+
+function updateAdmStats(){
+  const pW=AD.withdrawals.filter(w=>w.status==='pending').length;
+  const pD=AD.deposits.filter(d=>d.status==='pending').length;
+  const totD=AD.deposits.reduce((a,d)=>a+(d.amount||0),0);
+  const g=id=>document.getElementById(id);
+  ['as-users','as-dep','as-wd','as-stk','as-rev','aBu','aBd','aBw','pendCnt','uCount','dCount','wdCount'].forEach(id=>{
+    const el=g(id);if(!el)return;
+    if(id==='as-users'||id==='aBu')el.textContent=AD.users.length;
+    else if(id==='as-dep')el.textContent=totD.toFixed(0);
+    else if(id==='as-wd'||id==='aBw')el.textContent=pW;
+    else if(id==='as-stk')el.textContent=AD.stakes.length;
+    else if(id==='as-rev')el.textContent=(AD.withdrawals.reduce((a,w)=>a+(w.amount||0)*0.01,0)).toFixed(2);
+    else if(id==='aBd')el.textContent=pD;
+    else if(id==='pendCnt')el.textContent=pD+' pending';
+    else if(id==='uCount')el.textContent=AD.users.length+' users';
+    else if(id==='dCount')el.textContent=AD.deposits.length+' records';
+    else if(id==='wdCount')el.textContent=AD.withdrawals.length+' requests';
+  });
+}
+
+function renderPendingDeps(){
+  const pend=AD.deposits.filter(d=>d.status==='pending');
+  const tb=document.getElementById('pendDepTbl');if(!tb)return;
+  if(!pend.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:18px">No pending deposits</td></tr>';return}
+  const td='padding:9px 12px;border-bottom:1px solid rgba(148,210,255,.03)';
+  tb.innerHTML=pend.map(d=>'<tr><td style="'+td+'"><b style="color:var(--text)">'+( d.user||'—')+'</b><br><span class="mono" style="color:var(--text3)">'+( d.email||'')+'</span></td><td style="'+td+'" class="mono" style="color:var(--green)">$'+(d.amount||0).toFixed(2)+'</td><td style="'+td+'"><span class="apill apill-b">'+(d.network||'—')+'</span></td><td style="'+td+'" class="mono" style="color:var(--text3)">'+(d.tx||'').slice(0,16)+'...</td><td style="'+td+'"><button class="abtn abtn-g" style="margin-right:4px" onclick="approveDep(\''+d.id+'\')">Approve</button><button class="abtn abtn-r" onclick="rejectDep(\''+d.id+'\')">Reject</button></td></tr>').join('');
+}
+function approveDep(id){const d=AD.deposits.find(x=>x.id==id);if(!d)return;d.status='approved';const u=AD.users.find(x=>x.email===d.email);if(u){u.balance=(u.balance||0)+(d.amount||0);u.deposited=(u.deposited||0)+(d.amount||0)}saveAD();updateAdmStats();renderPendingDeps();renderDeps('');toast('Deposit $'+d.amount+' approved ✓','ok')}
+function rejectDep(id){const d=AD.deposits.find(x=>x.id==id);if(!d)return;d.status='rejected';saveAD();updateAdmStats();renderPendingDeps();renderDeps('');toast('Deposit rejected','err')}
+
+function renderUsers(search){
+  const fil=document.getElementById('uFil')?document.getElementById('uFil').value:'all';
+  const users=AD.users.filter(u=>{const ms=!search||(u.name||'').toLowerCase().includes(search.toLowerCase())||(u.email||'').toLowerCase().includes(search.toLowerCase());return ms&&(fil==='all'||u.status===fil)});
+  const tb=document.getElementById('uTbl');if(!tb)return;
+  const g=document.getElementById('uCount');if(g)g.textContent=users.length+' users';
+  if(!users.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:18px">No users</td></tr>';return}
+  const td='padding:9px 12px;border-bottom:1px solid rgba(148,210,255,.03)';
+  tb.innerHTML=users.map(u=>'<tr><td style="'+td+'"><b style="color:var(--text)">'+( u.name||'—')+'</b></td><td style="'+td+'" class="mono" style="color:var(--text3)">'+( u.email||'—')+'</td><td style="'+td+'" class="mono" style="color:var(--gold)">$'+(u.balance||0).toFixed(2)+'</td><td style="'+td+'" class="mono" style="color:var(--blue)">$'+(u.deposited||0).toFixed(2)+'</td><td style="'+td+'"><span class="apill '+(u.status==='suspended'?'apill-r':'apill-g')+'">'+( u.status||'active')+'</span></td><td style="'+td+'"><button class="abtn abtn-y" style="margin-right:4px" onclick="editBal(\''+u.email+'\')">Balance</button><button class="abtn abtn-r" onclick="suspendU(\''+u.email+'\')">'+(u.status==='suspended'?'Unsuspend':'Suspend')+'</button></td></tr>').join('');
+}
+function suspendU(email){const u=AD.users.find(x=>x.email===email);if(u){u.status=u.status==='suspended'?'active':'suspended';saveAD();renderUsers('');toast('User '+u.status,'ok')}}
+function editBal(email){const u=AD.users.find(x=>x.email===email);evKey={type:'balance',email};document.getElementById('evTitle').textContent='Edit Balance: '+(u?u.name:'');document.getElementById('evSub').textContent='Set new balance (USD)';document.getElementById('evLbl').textContent='New Balance (USD)';document.getElementById('evInput').value=u?(u.balance||0).toFixed(2):'0';document.getElementById('editValModal').classList.add('show')}
+function openAModal(id){document.getElementById(id+'Modal').classList.add('show')}
+function closeAModal(id){document.getElementById(id+'Modal').classList.remove('show')}
+function doAddUser(){
+  const name=document.getElementById('auN').value.trim();
+  const email=document.getElementById('auE').value.trim();
+  const bal=parseFloat(document.getElementById('auB').value)||0;
+  if(!name||!email){toast('Name and email required','err');return}
+  AD.users.push({id:email,name,email,balance:bal,deposited:0,earned:0,status:'active',joined:new Date().toLocaleDateString()});
+  saveAD();updateAdmStats();renderUsers('');closeAModal('addUser');
+  document.getElementById('auN').value='';document.getElementById('auE').value='';document.getElementById('auB').value='0';
+  toast('User created ✓','ok');
+}
+
+function renderDeps(search){
+  const fil=document.getElementById('dFil')?document.getElementById('dFil').value:'all';
+  const deps=AD.deposits.filter(d=>{const ms=!search||(d.user||'').toLowerCase().includes(search.toLowerCase());return ms&&(fil==='all'||d.status===fil)});
+  const tb=document.getElementById('dTbl');if(!tb)return;
+  const g=document.getElementById('dCount');if(g)g.textContent=deps.length+' records';
+  if(!deps.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:18px">No deposits</td></tr>';return}
+  const td='padding:9px 12px;border-bottom:1px solid rgba(148,210,255,.03)';
+  tb.innerHTML=deps.map(d=>'<tr><td style="'+td+'"><b style="color:var(--text)">'+( d.user||'—')+'</b></td><td style="'+td+'" class="mono" style="color:var(--green)">$'+(d.amount||0).toFixed(2)+'</td><td style="'+td+'"><span class="apill apill-b">'+(d.network||'—')+'</span></td><td style="'+td+'" class="mono" style="color:var(--text3)">'+(d.tx||'').slice(0,14)+'...</td><td style="'+td+'"><span class="apill '+(d.status==='pending'?'apill-y':d.status==='approved'?'apill-g':'apill-r')+'">'+d.status+'</span></td><td style="'+td+'">'+( d.status==='pending'?'<button class="abtn abtn-g" style="margin-right:4px" onclick="approveDep(\''+d.id+'\')">Approve</button><button class="abtn abtn-r" onclick="rejectDep(\''+d.id+'\')">Reject</button>':'<span style="color:var(--text3);font-size:11px">Done</span>')+'</td></tr>').join('');
+}
+
+function renderWds(){
+  const tb=document.getElementById('wdTbl');if(!tb)return;
+  const g=document.getElementById('wdCount');if(g)g.textContent=AD.withdrawals.length+' requests';
+  if(!AD.withdrawals.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:18px">No requests</td></tr>';return}
+  const td='padding:9px 12px;border-bottom:1px solid rgba(148,210,255,.03)';
+  tb.innerHTML=AD.withdrawals.map(w=>'<tr><td style="'+td+'"><b style="color:var(--text)">'+( w.user||'—')+'</b></td><td style="'+td+'" class="mono" style="color:var(--red)">$'+(w.amount||0).toFixed(2)+'</td><td style="'+td+'"><span class="apill apill-b">'+(w.network||'—')+'</span></td><td style="'+td+'" class="mono" style="color:var(--text3)">'+(w.tx||'').slice(0,20)+'...</td><td style="'+td+'"><span class="apill '+(w.status==='pending'?'apill-y':w.status==='processed'?'apill-g':'apill-r')+'">'+w.status+'</span></td><td style="'+td+'">'+( w.status==='pending'?'<button class="abtn abtn-g" style="margin-right:4px" onclick="processWd(\''+w.id+'\')">Process</button><button class="abtn abtn-r" onclick="rejectWd(\''+w.id+'\')">Reject</button>':'<span style="color:var(--text3);font-size:11px">Done</span>')+'</td></tr>').join('');
+}
+function processWd(id){const w=AD.withdrawals.find(x=>x.id==id);if(w){w.status='processed';saveAD();updateAdmStats();renderWds();toast('Withdrawal processed ✓','ok')}}
+function rejectWd(id){const w=AD.withdrawals.find(x=>x.id==id);if(w){w.status='rejected';saveAD();updateAdmStats();renderWds();toast('Withdrawal rejected')}}
+
+function renderStk(){
+  const tb=document.getElementById('stkTbl');if(!tb)return;
+  if(!AD.stakes.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:18px">No stakes</td></tr>';return}
+  const td='padding:9px 12px;border-bottom:1px solid rgba(148,210,255,.03)';
+  tb.innerHTML=AD.stakes.map(s=>'<tr><td style="'+td+'"><b style="color:var(--text)">'+( s.user||'—')+'</b></td><td style="'+td+'">'+( s.type||'Fixed')+'</td><td style="'+td+'" class="mono" style="color:var(--blue)">$'+(s.amount||0).toFixed(2)+'</td><td style="'+td+'"><span class="apill apill-b">'+(s.network||'—')+'</span></td><td style="'+td+'" style="font-size:11px;color:var(--text3)">'+( s.date||'—')+'</td><td style="'+td+'"><span class="apill apill-g">Active</span></td></tr>').join('');
+}
+
+function admToggle(key){
+  const el=document.getElementById('tog-'+key);
+  AD.settings[key]=!AD.settings[key];
+  el.classList.toggle('on',AD.settings[key]);
+  el.classList.toggle('off',!AD.settings[key]);
+  saveAD();toast(key+' '+(AD.settings[key]?'enabled':'disabled'),AD.settings[key]?'ok':'err');
+}
+function openEditModal(key,title,curr){
+  evKey={type:key};
+  document.getElementById('evTitle').textContent='Edit: '+title;
+  document.getElementById('evSub').textContent='Update '+title.toLowerCase();
+  document.getElementById('evLbl').textContent=title;
+  document.getElementById('evInput').value=curr||'';
+  document.getElementById('editValModal').classList.add('show');
+}
+function saveEditVal(){
+  const val=document.getElementById('evInput').value.trim();
+  if(!val){toast('Value required','err');return}
+  if(evKey){
+    if(evKey.type==='balance'){const u=AD.users.find(x=>x.email===evKey.email);if(u){u.balance=parseFloat(val)||0;renderUsers('')}}
+    else if(evKey.type==='apy'){AD.settings.apy=val;document.getElementById('apyVal').textContent=val}
+    else if(evKey.type==='fee'){AD.settings.fee=val;document.getElementById('feeVal').textContent=val}
+    else if(evKey.type==='bep20'){AD.settings.bep20=val;const el=document.getElementById('bep20Show');if(el)el.textContent=val.slice(0,8)+'...'+val.slice(-6)}
+    else if(evKey.type==='trc20'){AD.settings.trc20=val;const el=document.getElementById('trc20Show');if(el)el.textContent=val.slice(0,8)+'...'+val.slice(-4)}
+    saveAD();
+  }
+  closeAModal('editVal');evKey=null;toast('Updated ✓','ok');
+}
+
+function sendBcast(){
+  const msg=document.getElementById('bcMsg').value.trim();
+  const type=document.getElementById('bcType').value;
+  if(!msg){toast('Enter message','err');return}
+  const log=document.getElementById('bcLog');
+  if(log.textContent.includes('No messages'))log.innerHTML='';
+  const item=document.createElement('div');
+  item.style.cssText='padding:10px 0;border-bottom:1px solid rgba(148,210,255,.03)';
+  item.innerHTML='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="apill apill-b" style="font-size:10px">'+type.replace(/[^\w\s]/g,'').trim()+'</span><span style="font-size:10px;color:var(--text3);margin-left:auto;font-family:\'JetBrains Mono\',monospace">'+new Date().toLocaleTimeString()+'</span></div><div style="font-size:12px;color:var(--text2)">'+msg+'</div>';
+  log.prepend(item);
+  document.getElementById('bcMsg').value='';
+  toast('Message sent ✓','ok');
+}
+
+// ============================================================
+// HASH ROUTING — ADMIN ACCESS
+// ============================================================
+function checkHash(){
+  if(window.location.hash==='#admin'){
+    document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+    document.getElementById('adminPage').style.display='block';
+    document.getElementById('admLogin').style.display='flex';
+    document.getElementById('admDash').style.display='none';
+  }else{
+    document.getElementById('adminPage').style.display='none';
+  }
+}
+window.addEventListener('hashchange',checkHash);
+
+// ============================================================
+// INIT
+// ============================================================
+(function(){
+  if(window.location.hash==='#admin'){
+    document.getElementById('adminPage').style.display='block';
+    return;
+  }
+  document.getElementById('adminPage').style.display='none';
+  const email=localStorage.getItem('yv_email');
+  if(email){
+    loadS();
+    const name=localStorage.getItem('yv_name')||'User';
+    const method=S.wallet?S.wallet.type:'Email';
+    loginUser(name,email,method);
+  }
+})();
+</script>
+</body>
+</html>
