@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>YieldVault — Crypto Staking Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- WalletConnect + ethers -->
+<script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<style>
+:root{
+  --bg:#040810;--bg1:#07111e;--bg2:#0b1827;--bg3:#0f2035;
+  --card:#0d1f35;--card2:#112540;
+  --border:rgba(148,210,255,0.08);--border2:rgba(148,210,255,0.15);
+  --accent:#2d9cdb;--green:#00c896;--gold:#f2c94c;--red:#ff6b6b;
+  --blue:#56ccf2;--purple:#bb86fc;--orange:#f39c12;
+  --text:#f0f4f8;--text2:#8fa8c0;--text3:#4d6a82;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden;font-size:14px;}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 50% at 20% -10%,rgba(45,156,219,0.06),transparent),
+             radial-gradient(ellipse 60% 40% at 80% 110%,rgba(0,200,150,0.04),transparent);}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+#toast{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:300px;}
+.ti{background:var(--card2);border:1px solid var(--border2);border-left:3px solid var(--accent);
+  padding:11px 15px;border-radius:10px;font-size:13px;animation:tIn .25s ease;
+  display:flex;align-items:center;gap:10px;}
+.ti.ok{border-left-color:var(--green);}
+.ti.err{border-left-color:var(--red);}
+.ti.warn{border-left-color:var(--gold);}
+.ti-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+.ti.ok .ti-dot{background:var(--green);}
+.ti.err .ti-dot{background:var(--red);}
+.ti.warn .ti-dot{background:var(--gold);}
+@keyframes tIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.page{display:none;position:relative;z-index:1;}
+.page.on{display:block;}
+#authWrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.auth-box{width:100%;max-width:400px;}
+.auth-hero{text-align:center;margin-bottom:28px;}
+.auth-logomark{width:60px;height:60px;background:linear-gradient(135deg,#2d9cdb,#00c896);
+  border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;
+  box-shadow:0 8px 32px rgba(45,156,219,0.25);}
+.auth-h{font-size:26px;font-weight:800;letter-spacing:-0.5px;}
+.auth-s{font-size:14px;color:var(--text2);margin-top:6px;line-height:1.5;}
+.acard{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;}
+.fld{margin-bottom:16px;}
+.fld label{display:block;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;}
+.fld input,.fld select,.fld textarea{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:11px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:border .2s;}
+.fld input:focus{border-color:var(--accent);}
+.btn{padding:11px 18px;border-radius:9px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;font-size:14px;transition:all .2s;display:inline-flex;align-items:center;gap:8px;}
+.btn-primary{background:linear-gradient(135deg,#2d9cdb,#1a7bb5);color:#fff;}
+.btn-primary:hover{opacity:.88;transform:translateY(-1px);}
+.btn-green{background:linear-gradient(135deg,#00c896,#009e7a);color:#fff;}
+.btn-green:hover{opacity:.88;}
+.btn-red{background:linear-gradient(135deg,#ff6b6b,#c0392b);color:#fff;}
+.btn-purple{background:linear-gradient(135deg,#9b59b6,#7d3c98);color:#fff;}
+.btn-purple:hover{opacity:.88;transform:translateY(-1px);}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text2);}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm{padding:7px 13px;font-size:12px;border-radius:7px;}
+.btn-full{width:100%;justify-content:center;}
+.divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--text3);font-size:12px;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.wallet-options{display:flex;flex-direction:column;gap:10px;}
+.wopt{display:flex;align-items:center;gap:12px;padding:13px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:11px;cursor:pointer;transition:all .2s;}
+.wopt:hover{border-color:var(--accent);background:rgba(45,156,219,0.05);}
+.wopt.connecting{border-color:var(--gold);animation:wPulse 1s infinite;}
+.wopt.connected{border-color:var(--green);background:rgba(0,200,150,0.05);}
+@keyframes wPulse{0%,100%{opacity:1}50%{opacity:.7}}
+.wopt-ico{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.wopt-name{font-size:14px;font-weight:600;}
+.wopt-desc{font-size:11px;color:var(--text3);margin-top:2px;}
+.wopt-status{margin-left:auto;font-size:11px;font-family:'JetBrains Mono',monospace;}
+.wopt-arr{margin-left:auto;color:var(--text3);}
+.auth-switch{text-align:center;margin-top:16px;font-size:13px;color:var(--text3);}
+.auth-switch a{color:var(--accent);cursor:pointer;}
+.trust-row{display:flex;gap:8px;justify-content:center;margin-top:20px;flex-wrap:wrap;}
+.tbadge{display:flex;align-items:center;gap:5px;padding:5px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--text3);}
+nav{position:sticky;top:0;z-index:200;height:60px;background:rgba(4,8,16,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;}
+.logo-mark{width:30px;height:30px;background:linear-gradient(135deg,#2d9cdb,#00c896);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.logo-mark svg{width:14px;height:14px;}
+.logo-txt{font-size:16px;font-weight:800;letter-spacing:-0.3px;}
+.live-pill{display:flex;align-items:center;gap:5px;background:rgba(0,200,150,0.08);border:1px solid rgba(0,200,150,0.2);border-radius:20px;padding:4px 10px;margin-left:auto;}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.live-txt{font-size:10px;font-weight:700;color:var(--green);letter-spacing:.5px;}
+.nav-btns{display:flex;gap:8px;}
+.nbtn{padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-family:'Inter',sans-serif;font-weight:500;font-size:12px;transition:all .2s;}
+.nbtn:hover{border-color:var(--accent);color:var(--accent);}
+.wallet-badge{display:flex;align-items:center;gap:6px;background:rgba(0,200,150,0.08);border:1px solid rgba(0,200,150,0.2);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--green);font-family:'JetBrains Mono',monospace;cursor:pointer;}
+.wrap{max-width:1120px;margin:0 auto;padding:24px 16px 100px;}
+.sec{display:none;}.sec.on{display:block;}
+.sec-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.sec-title{font-size:17px;font-weight:700;letter-spacing:-.3px;}
+.sec-meta{font-size:12px;color:var(--text3);}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:22px;}
+.scard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden;}
+.scard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.scard.b::before{background:linear-gradient(90deg,var(--blue),transparent);}
+.scard.g::before{background:linear-gradient(90deg,var(--green),transparent);}
+.scard.w::before{background:linear-gradient(90deg,var(--gold),transparent);}
+.scard.p::before{background:linear-gradient(90deg,var(--purple),transparent);}
+.sc-lbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;}
+.sc-val{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:-.5px;}
+.sc-val.b{color:var(--blue);}
+.sc-val.g{color:var(--green);}
+.sc-val.w{color:var(--gold);}
+.sc-val.p{color:var(--purple);}
+.sc-sub{font-size:10px;color:var(--text3);margin-top:3px;font-family:'JetBrains Mono',monospace;}
+.ticker{background:var(--bg1);border:1px solid var(--border);border-radius:10px;padding:10px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px;overflow:hidden;}
+.ticker-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;flex-shrink:0;}
+.ticker-track{display:flex;gap:20px;overflow:hidden;flex:1;flex-wrap:wrap;}
+.titem{display:flex;align-items:center;gap:6px;font-size:12px;font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+.tname{color:var(--text3);}
+.tval{color:var(--green);font-weight:600;}
+.tchg{font-size:10px;color:var(--text3);}
+.tchg.up{color:var(--green);}
+.tchg.dn{color:var(--red);}
+.feed-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:20px;}
+.feed-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.feed-title{font-size:13px;font-weight:700;}
+.feed-list{display:flex;flex-direction:column;gap:7px;}
+.fitem{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg2);border-radius:8px;animation:feedIn .4s ease;}
+@keyframes feedIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.fav{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+.finfo{flex:1;min-width:0;}
+.fuser{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fdetail{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:1px;}
+.famt{font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--green);flex-shrink:0;}
+.ftime{font-size:10px;color:var(--text3);flex-shrink:0;}
+.flex-banner{background:linear-gradient(135deg,rgba(155,89,182,0.1),rgba(45,156,219,0.05));border:1px solid rgba(155,89,182,0.2);border-radius:12px;padding:16px 18px;margin-bottom:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.fb-icon{width:42px;height:42px;background:rgba(155,89,182,0.12);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.fb-info{flex:1;min-width:200px;}
+.fb-h{font-size:14px;font-weight:700;color:var(--purple);}
+.fb-s{font-size:12px;color:var(--text2);margin-top:3px;}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;}
+.chip{padding:3px 9px;border-radius:5px;font-size:10px;font-weight:600;letter-spacing:.3px;}
+.chip-p{background:rgba(155,89,182,0.12);color:var(--purple);border:1px solid rgba(155,89,182,0.2);}
+.chip-g{background:rgba(0,200,150,0.1);color:var(--green);border:1px solid rgba(0,200,150,0.2);}
+.chip-b{background:rgba(45,156,219,0.1);color:var(--blue);border:1px solid rgba(45,156,219,0.2);}
+.chip-w{background:rgba(242,201,76,0.1);color:var(--gold);border:1px solid rgba(242,201,76,0.2);}
+.pools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;}
+.pcard{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;transition:all .25s;cursor:pointer;}
+.pcard:hover{border-color:rgba(45,156,219,0.3);transform:translateY(-2px);box-shadow:0 8px 32px rgba(45,156,219,0.12);}
+.pcard.flex-pc{border-color:rgba(155,89,182,0.2);}
+.pcard.flex-pc:hover{border-color:rgba(155,89,182,0.4);}
+.pc-head{display:flex;align-items:center;gap:11px;margin-bottom:14px;}
+.pc-ico{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.pc-name{font-size:14px;font-weight:700;}
+.pc-net{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;}
+.badge-hot{background:rgba(255,107,107,0.1);color:var(--red);border:1px solid rgba(255,107,107,0.25);}
+.badge-new{background:rgba(0,200,150,0.1);color:var(--green);border:1px solid rgba(0,200,150,0.25);}
+.badge-stable{background:rgba(45,156,219,0.1);color:var(--blue);border:1px solid rgba(45,156,219,0.25);}
+.badge-flex{background:rgba(155,89,182,0.12);color:var(--purple);border:1px solid rgba(155,89,182,0.25);}
+.badge-elite{background:rgba(242,201,76,0.1);color:var(--gold);border:1px solid rgba(242,201,76,0.25);}
+.pc-stats{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:13px;}
+.pcs{background:var(--bg2);border-radius:7px;padding:9px 11px;}
+.pcs-l{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
+.pcs-v{font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;}
+.pcs-v.g{color:var(--green);}
+.pcs-v.b{color:var(--blue);}
+.pcs-v.p{color:var(--purple);}
+.pc-bar{height:3px;background:var(--border);border-radius:2px;margin-bottom:4px;overflow:hidden;}
+.pc-fill{height:100%;border-radius:2px;}
+.pc-cap{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-bottom:13px;}
+.pool-btn{width:100%;padding:10px;border-radius:8px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;font-size:13px;transition:all .2s;}
+.pool-btn.pb-p{background:rgba(45,156,219,0.1);border:1px solid rgba(45,156,219,0.2);color:var(--blue);}
+.pool-btn.pb-p:hover{background:rgba(45,156,219,0.18);}
+.pool-btn.pb-f{background:rgba(155,89,182,0.1);border:1px solid rgba(155,89,182,0.2);color:var(--purple);}
+.pool-btn.pb-f:hover{background:rgba(155,89,182,0.18);}
+.flex-feats{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:11px;}
+.dw-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media(max-width:640px){.dw-grid{grid-template-columns:1fr;}}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;}
+.panel-h{font-size:15px;font-weight:700;margin-bottom:4px;}
+.panel-s{font-size:12px;color:var(--text3);margin-bottom:18px;}
+.net-tabs{display:flex;gap:7px;margin-bottom:13px;}
+.nt{padding:6px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);color:var(--text3);transition:all .2s;font-family:'JetBrains Mono',monospace;}
+.nt.active{border-color:var(--accent);color:var(--accent);background:rgba(45,156,219,0.08);}
+.addr-box{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;word-break:break-all;color:var(--blue);margin-bottom:10px;cursor:pointer;transition:all .2s;line-height:1.6;}
+.addr-box:hover{border-color:var(--accent);}
+.copy-btn{width:100%;padding:9px;border-radius:8px;background:var(--bg2);border:1px solid var(--border);color:var(--text2);cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;transition:all .2s;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:7px;}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent);}
+.warn-box{background:rgba(242,201,76,0.05);border:1px solid rgba(242,201,76,0.2);border-radius:8px;padding:10px 12px;font-size:11px;color:#c9a227;line-height:1.6;}
+.bal-box{background:var(--bg2);border-radius:9px;padding:14px;margin-bottom:16px;}
+.bal-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;}
+.bal-val{font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--green);}
+.quick-row{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap;}
+.qb{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;background:var(--bg2);border:1px solid var(--border);color:var(--text3);cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all .2s;}
+.qb:hover{border-color:var(--accent);color:var(--accent);}
+.tx-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;overflow-x:auto;}
+.tx-th{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1fr;padding:9px 16px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);border-bottom:1px solid var(--border);}
+.tx-row{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1fr;padding:11px 16px;border-bottom:1px solid rgba(148,210,255,0.03);font-size:13px;transition:background .15s;}
+.tx-row:last-child{border-bottom:none;}
+.tx-row:hover{background:var(--bg2);}
+.tx-tc{display:flex;align-items:center;gap:8px;font-weight:500;}
+.tx-ico{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+.s-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;}
+.s-ok{background:rgba(0,200,150,0.1);color:var(--green);}
+.s-pend{background:rgba(242,201,76,0.1);color:var(--gold);}
+.stake-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.sk-l{display:flex;align-items:center;gap:11px;}
+.sk-ico{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.sk-vals{display:flex;gap:18px;flex-wrap:wrap;}
+.sv-l{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;}
+.sv-v{font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.flex-panel{background:linear-gradient(135deg,rgba(155,89,182,0.08),rgba(45,156,219,0.04));border:1px solid rgba(155,89,182,0.2);border-radius:14px;padding:18px;margin-bottom:14px;}
+.fp-head{display:flex;align-items:center;gap:10px;margin-bottom:13px;flex-wrap:wrap;}
+.fp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:13px;}
+.fg{background:rgba(0,0,0,0.2);border-radius:8px;padding:10px;text-align:center;}
+.fg-l{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;}
+.fg-v{font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;margin-top:3px;}
+.fp-acts{display:flex;gap:7px;flex-wrap:wrap;}
+.support-wrap{max-width:540px;margin:0 auto;}
+.support-hero{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:30px;text-align:center;margin-bottom:14px;}
+.tg-circle{width:68px;height:68px;background:linear-gradient(135deg,#0088cc,#00aaff);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:26px;}
+.support-h{font-size:20px;font-weight:700;margin-bottom:7px;}
+.support-s{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:20px;}
+.tg-link{display:inline-flex;align-items:center;gap:9px;background:linear-gradient(135deg,#0088cc,#00aaff);color:#fff;padding:12px 28px;border-radius:11px;text-decoration:none;font-weight:700;font-size:14px;transition:all .2s;}
+.tg-link:hover{opacity:.88;transform:translateY(-1px);}
+.rs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:20px;}
+.rs-item{background:var(--bg2);border-radius:8px;padding:12px;text-align:center;}
+.rs-val{font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--green);}
+.rs-lbl{font-size:10px;color:var(--text3);margin-top:3px;}
+.faq-list{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.faq-item{padding:15px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .2s;}
+.faq-item:last-child{border-bottom:none;}
+.faq-item:hover{background:var(--bg2);}
+.faq-q{font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.faq-a{font-size:13px;color:var(--text2);margin-top:8px;line-height:1.6;display:none;}
+.faq-item.open .faq-a{display:block;}
+.faq-arr{color:var(--text3);transition:transform .2s;flex-shrink:0;}
+.faq-item.open .faq-arr{transform:rotate(90deg);}
+.prof-av{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;margin-bottom:12px;}
+.kv{display:flex;justify-content:space-between;align-items:center;padding:10px 13px;background:var(--bg2);border-radius:8px;font-size:13px;}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
+.modal-bg.hidden{display:none;}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:24px;width:100%;max-width:420px;margin:auto;}
+.modal-h{font-size:17px;font-weight:700;margin-bottom:4px;}
+.modal-s{font-size:13px;color:var(--text3);margin-bottom:18px;}
+.minfo{background:rgba(155,89,182,0.08);border:1px solid rgba(155,89,182,0.2);border-radius:9px;padding:13px;margin-bottom:14px;}
+.mrow{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;}
+.mrow:last-child{margin-bottom:0;}
+.preview{background:var(--bg2);border-radius:9px;padding:13px;margin:13px 0;}
+.pr{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;}
+.pr:last-child{margin-bottom:0;padding-top:8px;border-top:1px solid var(--border);font-weight:600;}
+input[type=range]{-webkit-appearance:none;width:100%;height:3px;border-radius:2px;background:var(--border);outline:none;margin:10px 0;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;}
+.amt-inp{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:12px 14px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:17px;text-align:center;outline:none;}
+.amt-inp:focus{border-color:var(--accent);}
+.mact{display:flex;gap:9px;margin-top:16px;}
+.mact .btn{flex:1;justify-content:center;}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(4,8,16,0.96);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:8px 0 max(14px,env(safe-area-inset-bottom));}
+.ni{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:0 10px;color:var(--text3);transition:color .2s;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.ni.active{color:var(--accent);}
+.ni svg{width:20px;height:20px;}
+/* Wallet connect status bar */
+.wallet-status-bar{background:rgba(0,200,150,0.06);border:1px solid rgba(0,200,150,0.2);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;}
+.ws-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.ws-info{flex:1;}
+.ws-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;}
+.ws-addr{font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--green);margin-top:2px;}
+.ws-disconnect{font-size:11px;color:var(--red);cursor:pointer;font-weight:600;}
+.ws-disconnect:hover{text-decoration:underline;}
+/* WC QR */
+.wc-qr-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;margin-bottom:16px;}
+.wc-qr-wrap img{width:180px;height:180px;border-radius:8px;background:#fff;padding:8px;}
+.wc-uri{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);word-break:break-all;margin-top:10px;padding:8px;background:var(--bg3);border-radius:6px;}
+@media(max-width:768px){
+  .tx-th,.tx-row{grid-template-columns:1.2fr 1fr 1fr;}
+  .tx-th span:nth-child(3),.tx-th span:nth-child(4),.tx-row>*:nth-child(3),.tx-row>*:nth-child(4){display:none;}
+  .pools-grid{grid-template-columns:1fr;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .nav-btns .nbtn:first-child{display:none;}
+  .ticker-track .titem:nth-child(n+4){display:none;}
+}
+@media(max-width:400px){
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  nav{padding:0 14px;}
+  .wrap{padding:18px 12px 100px;}
+}
+
+.adm-tab{padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
+.adm-tab:hover{color:var(--text);}
+.adm-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.adm-sec{display:none;}
+.adm-sec.on{display:block;}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- AUTH PAGE -->
+<div id="authPage" class="page on">
+  <div id="authWrap">
+    <div class="auth-box">
+      <div class="auth-hero">
+        <div class="auth-logomark">
+          <svg viewBox="0 0 32 32" fill="none" style="width:26px;height:26px;">
+            <path d="M16 4L28 10V22L16 28L4 22V10L16 4Z" stroke="white" stroke-width="1.5" fill="none"/>
+            <path d="M16 10L22 13V19L16 22L10 19V13L16 10Z" fill="white" fill-opacity="0.9"/>
+          </svg>
+        </div>
+        <div class="auth-h">YieldVault</div>
+        <div class="auth-s">Institutional-grade crypto staking.<br>Trusted by 47,000+ users worldwide.</div>
+      </div>
+      <div class="acard">
+        <!-- EMAIL LOGIN -->
+        <div id="emailSection">
+          <div class="fld"><label>Email Address</label><input type="email" id="aEmail" placeholder="your@email.com" autocomplete="email"></div>
+          <div class="fld"><label>Password</label><input type="password" id="aPass" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')doAuth()"></div>
+          <div id="aNameFld" class="fld" style="display:none;"><label>Full Name</label><input type="text" id="aName" placeholder="Your name"></div>
+          <button class="btn btn-primary btn-full" onclick="doAuth()"><span id="aBtnTxt">Sign In</span></button>
+        </div>
+
+        <div class="divider">or connect wallet</div>
+
+        <!-- WALLET OPTIONS -->
+        <div class="wallet-options">
+          <div class="wopt" id="wopt-trust" onclick="connectTrustWallet()">
+            <div class="wopt-ico" style="background:#1a4f8a;">🔐</div>
+            <div><div class="wopt-name">Trust Wallet</div><div class="wopt-desc">Mobile wallet · BEP20 / TRC20 / EVM</div></div>
+            <div class="wopt-arr" id="tw-arr">›</div>
+          </div>
+          <div class="wopt" id="wopt-mm" onclick="connectMetaMask()">
+            <div class="wopt-ico" style="background:#e8761b;">🦊</div>
+            <div><div class="wopt-name">MetaMask</div><div class="wopt-desc">Browser extension · EVM networks</div></div>
+            <div class="wopt-arr" id="mm-arr">›</div>
+          </div>
+          <div class="wopt" id="wopt-wc" onclick="connectWalletConnect()">
+            <div class="wopt-ico" style="background:#3b99fc;">🔗</div>
+            <div><div class="wopt-name">WalletConnect</div><div class="wopt-desc">Scan QR · 300+ wallets supported</div></div>
+            <div class="wopt-arr" id="wc-arr">›</div>
+          </div>
+        </div>
+
+        <div class="auth-switch"><span id="aSwitchTxt">New to YieldVault?</span> <a onclick="toggleAuth()">Create account</a></div>
+      </div>
+      <div class="trust-row">
+        <div class="tbadge">🔒 SSL Secured</div>
+        <div class="tbadge">✓ KYC Verified</div>
+        <div class="tbadge">🛡 Funds Protected</div>
+        <div class="tbadge">⚡ Instant Staking</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainPage" class="page">
+  <nav>
+    <div class="logo-mark">
+      <svg viewBox="0 0 32 32" fill="none">
+        <path d="M16 4L28 10V22L16 28L4 22V10L16 4Z" stroke="white" stroke-width="1.5" fill="none"/>
+        <path d="M16 10L22 13V19L16 22L10 19V13L16 10Z" fill="white" fill-opacity="0.85"/>
+      </svg>
+    </div>
+    <div class="logo-txt">YieldVault</div>
+    <div class="live-pill"><div class="live-dot"></div><div class="live-txt">LIVE</div></div>
+    <div class="nav-btns">
+      <div id="walletNavBadge" class="wallet-badge" style="display:none;" onclick="showSec('secProfile');setNav('profile')">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;"></span>
+        <span id="walletShortAddr">0x...</span>
+      </div>
+      <button class="nbtn" onclick="showSec('secSupport');setNav('support')">Support</button>
+      <button class="nbtn" onclick="doLogout()">Sign Out</button>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <!-- HOME -->
+    <div class="sec on" id="secHome">
+      <div class="ticker">
+        <div class="ticker-lbl">Live</div>
+        <div class="ticker-track">
+          <div class="titem"><span class="tname">BTC</span><span class="tval" id="t-btc">Loading...</span><span class="tchg" id="tc-btc"></span></div>
+          <div class="titem"><span class="tname">ETH</span><span class="tval" id="t-eth">—</span><span class="tchg" id="tc-eth"></span></div>
+          <div class="titem"><span class="tname">BNB</span><span class="tval" id="t-bnb">—</span><span class="tchg" id="tc-bnb"></span></div>
+          <div class="titem"><span class="tname">TRX</span><span class="tval" id="t-trx">—</span><span class="tchg" id="tc-trx"></span></div>
+          <div class="titem"><span class="tname">TVL</span><span class="tval">$354.2M</span><span class="tchg up">↑</span></div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="scard b"><div class="sc-lbl">Total Deposited</div><div class="sc-val b">$<span id="sDep">0.00</span></div><div class="sc-sub">BEP20 / TRC20</div></div>
+        <div class="scard g"><div class="sc-lbl">Total Earned</div><div class="sc-val g">$<span id="sEarned">0.00</span></div><div class="sc-sub">All rewards</div></div>
+        <div class="scard w"><div class="sc-lbl">Available Balance</div><div class="sc-val w">$<span id="sBal">0.00</span></div><div class="sc-sub">Withdrawable</div></div>
+        <div class="scard p"><div class="sc-lbl">Active Stakes</div><div class="sc-val p"><span id="sStakes">0</span></div><div class="sc-sub">Running pools</div></div>
+      </div>
+      <div class="feed-card">
+        <div class="feed-head">
+          <div><div class="feed-title">Live Deposits</div><div style="font-size:11px;color:var(--text3);">Real-time platform activity</div></div>
+          <div class="live-pill"><div class="live-dot"></div><div class="live-txt">LIVE</div></div>
+        </div>
+        <div class="feed-list" id="feedList"></div>
+      </div>
+      <div class="flex-banner">
+        <div class="fb-icon">🔓</div>
+        <div class="fb-info">
+          <div class="fb-h">Flexible Staking — No Lock Period</div>
+          <div class="fb-s">Deposit any amount, withdraw anytime. 14% APY with daily compound.</div>
+          <div class="chips">
+            <span class="chip chip-p">14% APY</span><span class="chip chip-g">No Lock</span>
+            <span class="chip chip-b">Min $5</span><span class="chip chip-w">Anytime Withdraw</span>
+          </div>
+        </div>
+        <button class="btn btn-purple btn-sm" onclick="openStake('flex')">Start Earning →</button>
+      </div>
+      <div class="sec-h"><span class="sec-title">Staking Pools</span><span class="sec-meta">5 pools · 14% APY</span></div>
+      <div class="pools-grid">
+        <div class="pcard flex-pc" onclick="openStake('flex')">
+          <div class="pc-head"><div class="pc-ico" style="background:rgba(155,89,182,.12);">🔓</div><div><div class="pc-name">Flexible Pool</div><div class="pc-net">BEP20 / TRC20</div></div><span class="badge badge-flex" style="margin-left:auto;">✦ FLEX</span></div>
+          <div class="flex-feats"><span class="chip chip-g" style="font-size:10px;">No Lock</span><span class="chip chip-b" style="font-size:10px;">Anytime Withdraw</span><span class="chip chip-p" style="font-size:10px;">Daily Rewards</span></div>
+          <div class="pc-stats">
+            <div class="pcs"><div class="pcs-l">APY</div><div class="pcs-v p">14%</div></div>
+            <div class="pcs"><div class="pcs-l">Lock</div><div class="pcs-v g">None ✓</div></div>
+            <div class="pcs"><div class="pcs-l">Min</div><div class="pcs-v">$5</div></div>
+            <div class="pcs"><div class="pcs-l">TVL</div><div class="pcs-v b">$3.2M</div></div>
+          </div>
+          <button class="pool-btn pb-f">Open Flexible Pool →</button>
+        </div>
+        <div class="pcard" onclick="openStake('u-bep')">
+          <div class="pc-head"><div class="pc-ico" style="background:rgba(0,200,150,.1);">₮</div><div><div class="pc-name">USDT — BEP20</div><div class="pc-net">Binance Smart Chain</div></div><span class="badge badge-hot" style="margin-left:auto;">● HOT</span></div>
+          <div class="pc-stats">
+            <div class="pcs"><div class="pcs-l">APY</div><div class="pcs-v g">14%</div></div>
+            <div class="pcs"><div class="pcs-l">Lock</div><div class="pcs-v">30 Days</div></div>
+            <div class="pcs"><div class="pcs-l">Min</div><div class="pcs-v">$10</div></div>
+            <div class="pcs"><div class="pcs-l">TVL</div><div class="pcs-v b">$2.1M</div></div>
+          </div>
+          <div class="pc-bar"><div class="pc-fill" style="width:72%;background:var(--green);"></div></div>
+          <div class="pc-cap">72% capacity · 28% remaining</div>
+          <button class="pool-btn pb-p">Stake Now →</button>
+        </div>
+        <div class="pcard" onclick="openStake('u-trc')">
+          <div class="pc-head"><div class="pc-ico" style="background:rgba(235,87,87,.1);">₮</div><div><div class="pc-name">USDT — TRC20</div><div class="pc-net">TRON Network</div></div><span class="badge badge-new" style="margin-left:auto;">✦ NEW</span></div>
+          <div class="pc-stats">
+            <div class="pcs"><div class="pcs-l">APY</div><div class="pcs-v g">14%</div></div>
+            <div class="pcs"><div class="pcs-l">Lock</div><div class="pcs-v">60 Days</div></div>
+            <div class="pcs"><div class="pcs-l">Min</div><div class="pcs-v">$25</div></div>
+            <div class="pcs"><div class="pcs-l">TVL</div><div class="pcs-v b">$890K</div></div>
+          </div>
+          <div class="pc-bar"><div class="pc-fill" style="width:45%;background:var(--accent);"></div></div>
+          <div class="pc-cap">45% capacity · 55% remaining</div>
+          <button class="pool-btn pb-p">Stake Now →</button>
+        </div>
+        <div class="pcard" onclick="openStake('bnb')">
+          <div class="pc-head"><div class="pc-ico" style="background:rgba(242,201,76,.1);">⬡</div><div><div class="pc-name">BNB Vault</div><div class="pc-net">BEP20 · High Yield</div></div><span class="badge badge-stable" style="margin-left:auto;">◈ STABLE</span></div>
+          <div class="pc-stats">
+            <div class="pcs"><div class="pcs-l">APY</div><div class="pcs-v g">14%</div></div>
+            <div class="pcs"><div class="pcs-l">Lock</div><div class="pcs-v">90 Days</div></div>
+            <div class="pcs"><div class="pcs-l">Min</div><div class="pcs-v">$50</div></div>
+            <div class="pcs"><div class="pcs-l">TVL</div><div class="pcs-v b">$5.4M</div></div>
+          </div>
+          <div class="pc-bar"><div class="pc-fill" style="width:88%;background:var(--gold);"></div></div>
+          <div class="pc-cap">88% capacity · Nearly full</div>
+          <button class="pool-btn pb-p">Stake Now →</button>
+        </div>
+        <div class="pcard" onclick="openStake('trx')">
+          <div class="pc-head"><div class="pc-ico" style="background:rgba(86,204,242,.1);">◈</div><div><div class="pc-name">TRX Elite</div><div class="pc-net">TRC20 · Premium</div></div><span class="badge badge-elite" style="margin-left:auto;">★ ELITE</span></div>
+          <div class="pc-stats">
+            <div class="pcs"><div class="pcs-l">APY</div><div class="pcs-v g">14%</div></div>
+            <div class="pcs"><div class="pcs-l">Lock</div><div class="pcs-v">180 Days</div></div>
+            <div class="pcs"><div class="pcs-l">Min</div><div class="pcs-v">$100</div></div>
+            <div class="pcs"><div class="pcs-l">TVL</div><div class="pcs-v b">$1.2M</div></div>
+          </div>
+          <div class="pc-bar"><div class="pc-fill" style="width:33%;background:var(--blue);"></div></div>
+          <div class="pc-cap">33% capacity · 67% remaining</div>
+          <button class="pool-btn pb-p">Stake Now →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEPOSIT -->
+    <div class="sec" id="secDeposit">
+      <div class="sec-h"><span class="sec-title">Deposit Funds</span></div>
+      <div id="walletDepositInfo" style="display:none;" class="wallet-status-bar">
+        <div class="ws-dot"></div>
+        <div class="ws-info"><div class="ws-label">Wallet Connected</div><div class="ws-addr" id="wDepAddr">—</div></div>
+        <div class="ws-disconnect" onclick="disconnectWallet()">Disconnect</div>
+      </div>
+      <div class="dw-grid">
+        <div class="panel">
+          <div class="panel-h">Deposit Address</div>
+          <div class="panel-s">Send crypto to this address to fund your account</div>
+          <div class="net-tabs">
+            <div class="nt active" id="ntBEP" onclick="switchNet('BEP20')">BEP20</div>
+            <div class="nt" id="ntTRC" onclick="switchNet('TRC20')">TRC20</div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;" id="netLbl">Binance Smart Chain — BEP20</div>
+          <div class="addr-box" id="dAddr" onclick="copyAddr()">0x78209a6b829a82e9d440bad4182b040186f78bff</div>
+          <div class="copy-btn" onclick="copyAddr()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy Address
+          </div>
+          <div style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:20px;margin-bottom:10px;color:var(--text3);font-size:11px;min-height:90px;">
+            <div style="font-size:28px;">📱</div>
+            <div>Scan with Trust Wallet or any crypto app</div>
+          </div>
+          <div class="warn-box">⚠ Only send <strong id="netNm">BEP20</strong> tokens to this address. Wrong network = lost funds permanently.</div>
+        </div>
+        <div class="panel">
+          <div class="panel-h">Confirm Transaction</div>
+          <div class="panel-s">Already sent? Submit your TX hash to confirm</div>
+          <div class="fld"><label>Network</label>
+            <select id="depNet"><option>BEP20 (Binance Smart Chain)</option><option>TRC20 (TRON Network)</option></select>
+          </div>
+          <div class="fld"><label>Amount (USD)</label>
+            <input type="number" id="depAmt" placeholder="Minimum $5">
+            <div class="quick-row">
+              <span class="qb" onclick="qi('depAmt',50)">$50</span>
+              <span class="qb" onclick="qi('depAmt',100)">$100</span>
+              <span class="qb" onclick="qi('depAmt',250)">$250</span>
+              <span class="qb" onclick="qi('depAmt',500)">$500</span>
+              <span class="qb" onclick="qi('depAmt',1000)">$1K</span>
+            </div>
+          </div>
+          <div class="fld"><label>Transaction Hash</label><input type="text" id="depTx" placeholder="0x... or T..."></div>
+          <button class="btn btn-green btn-full" onclick="submitDeposit()">Confirm Deposit</button>
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;line-height:2;">
+            BEP20: 0x7820...f78bff<br>TRC20: THrB7...ZpGVa<br>Min: $5 · ETA: ~5 min
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WITHDRAW -->
+    <div class="sec" id="secWithdraw">
+      <div class="sec-h"><span class="sec-title">Withdraw Funds</span></div>
+      <div class="dw-grid">
+        <div class="panel">
+          <div class="panel-h">Withdrawal Request</div>
+          <div class="panel-s">Processed within 24–48 hours</div>
+          <div class="bal-box">
+            <div class="bal-lbl">Available Balance</div>
+            <div class="bal-val">$<span id="avBal">0.00</span></div>
+            <div style="font-size:10px;color:var(--text3);margin-top:5px;font-family:'JetBrains Mono',monospace;">Locked stakes not included</div>
+          </div>
+          <div class="fld"><label>Network</label>
+            <select id="wdNet"><option>BEP20 (Binance Smart Chain)</option><option>TRC20 (TRON Network)</option></select>
+          </div>
+          <div class="fld"><label>Destination Wallet</label>
+            <input type="text" id="wdAddr" placeholder="Your receiving address">
+            <div id="useWalletBtn" style="display:none;margin-top:6px;">
+              <button class="btn btn-outline btn-sm" onclick="useConnectedWallet()" style="font-size:11px;">Use Connected Wallet</button>
+            </div>
+          </div>
+          <div class="fld"><label>Amount (USD)</label>
+            <input type="number" id="wdAmt" placeholder="Minimum $10">
+            <div class="quick-row">
+              <span class="qb" onclick="qi('wdAmt',25)">$25</span>
+              <span class="qb" onclick="qi('wdAmt',50)">$50</span>
+              <span class="qb" onclick="qi('wdAmt',100)">$100</span>
+              <span class="qb" onclick="document.getElementById('wdAmt').value=S.bal.toFixed(2)">MAX</span>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">Network fee: 1% · Minimum: $10</div>
+          <button class="btn btn-red btn-full" onclick="submitWithdraw()">Submit Withdrawal</button>
+        </div>
+        <div class="panel">
+          <div class="panel-h">Withdrawal History</div>
+          <div class="panel-s">Your recent withdrawal requests</div>
+          <div id="wdHist" style="color:var(--text3);font-size:13px;text-align:center;padding:40px 0;">No withdrawals yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MY STAKES -->
+    <div class="sec" id="secStakes">
+      <div class="sec-h"><span class="sec-title">My Stakes</span></div>
+      <div id="flexPanel" style="display:none;" class="flex-panel">
+        <div class="fp-head">
+          <div class="sk-ico" style="background:rgba(155,89,182,.12);font-size:16px;">🔓</div>
+          <div style="flex:1;"><div style="font-size:14px;font-weight:700;color:var(--purple);">Flexible Pool</div><div style="font-size:11px;color:var(--text3);">14% APY · No lock · Withdraw anytime</div></div>
+          <div style="text-align:right;"><div style="font-size:10px;color:var(--text3);">Staked</div><div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--purple);">$<span id="fpStaked">0.00</span></div></div>
+        </div>
+        <div class="fp-grid">
+          <div class="fg"><div class="fg-l">Today's Earnings</div><div class="fg-v" style="color:var(--green);">$<span id="fpToday">0.0000</span></div></div>
+          <div class="fg"><div class="fg-l">Total Earned</div><div class="fg-v" style="color:var(--green);">$<span id="fpTotal">0.0000</span></div></div>
+          <div class="fg"><div class="fg-l">Daily Rate</div><div class="fg-v" style="color:var(--purple);">0.038%</div></div>
+        </div>
+        <div class="fp-acts">
+          <button class="btn btn-purple btn-sm" style="flex:1;" onclick="openFlexAdd()">+ Add More</button>
+          <button class="btn btn-green btn-sm" style="flex:1;" onclick="openFlexWd()">Partial Withdraw</button>
+          <button class="btn btn-red btn-sm" style="flex:1;" onclick="openFlexWdAll()">Withdraw All</button>
+        </div>
+      </div>
+      <div id="stakesList"><div style="color:var(--text3);font-size:13px;text-align:center;padding:40px 0;">No active fixed stakes. <a style="color:var(--accent);cursor:pointer;" onclick="showSec('secHome');setNav('home')">Browse pools →</a></div></div>
+    </div>
+
+    <!-- TRANSACTIONS -->
+    <div class="sec" id="secTx">
+      <div class="sec-h"><span class="sec-title">Transaction History</span></div>
+      <div class="tx-wrap">
+        <div class="tx-th"><span>Transaction</span><span>Amount</span><span>Network</span><span>Date</span><span>Status</span></div>
+        <div id="txList"><div style="color:var(--text3);font-size:13px;text-align:center;padding:40px;">No transactions yet</div></div>
+      </div>
+    </div>
+
+    <!-- SUPPORT -->
+    <div class="sec" id="secSupport">
+      <div class="support-wrap">
+        <div class="support-hero">
+          <div class="tg-circle">✈</div>
+          <div class="support-h">24/7 Customer Support</div>
+          <div class="support-s">Our team is available around the clock. Average response time under 2 minutes.</div>
+          <a href="https://t.me/KeyForgeAi" target="_blank" class="tg-link">Open Telegram — @KeyForgeAi</a>
+          <div class="rs-grid">
+            <div class="rs-item"><div class="rs-val">&lt;2m</div><div class="rs-lbl">Avg Response</div></div>
+            <div class="rs-item"><div class="rs-val">24/7</div><div class="rs-lbl">Availability</div></div>
+            <div class="rs-item"><div class="rs-val">99.4%</div><div class="rs-lbl">Satisfaction</div></div>
+          </div>
+        </div>
+        <div class="faq-list">
+          <div class="faq-item" onclick="this.classList.toggle('open')"><div class="faq-q">How does the Flexible Pool work?<span class="faq-arr">›</span></div><div class="faq-a">14% APY, no lock. Deposit from $5, withdraw anytime with no penalties. Daily compound at 0.038%/day.</div></div>
+          <div class="faq-item" onclick="this.classList.toggle('open')"><div class="faq-q">How do I connect Trust Wallet?<span class="faq-arr">›</span></div><div class="faq-a">Click "Trust Wallet" on the login screen. If on mobile, it will open the Trust Wallet app automatically. On desktop, use WalletConnect to scan the QR code with Trust Wallet.</div></div>
+          <div class="faq-item" onclick="this.classList.toggle('open')"><div class="faq-q">How long do deposits take?<span class="faq-arr">›</span></div><div class="faq-a">5–15 minutes after network confirmation for both BEP20 and TRC20.</div></div>
+          <div class="faq-item" onclick="this.classList.toggle('open')"><div class="faq-q">Can I withdraw from a fixed pool early?<span class="faq-arr">›</span></div><div class="faq-a">Yes, with a 5% early exit fee. We recommend the Flexible Pool if you need liquidity.</div></div>
+          <div class="faq-item" onclick="this.classList.toggle('open')"><div class="faq-q">Which networks are supported?<span class="faq-arr">›</span></div><div class="faq-a">BEP20 (Binance Smart Chain) and TRC20 (TRON Network). Always verify before sending.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="sec" id="secProfile">
+      <div class="sec-h"><span class="sec-title">Account</span></div>
+      <div id="walletStatusBar" style="display:none;" class="wallet-status-bar">
+        <div class="ws-dot"></div>
+        <div class="ws-info"><div class="ws-label">Wallet Connected</div><div class="ws-addr" id="wsAddr">—</div></div>
+        <div class="ws-disconnect" onclick="disconnectWallet()">Disconnect</div>
+      </div>
+      <div class="panel" style="margin-bottom:14px;">
+        <div class="prof-av" id="profAv" style="background:linear-gradient(135deg,#2d9cdb,#00c896);">?</div>
+        <div style="font-size:18px;font-weight:700;" id="profName">—</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:4px;" id="profEmail">—</div>
+        <div id="walletAddrDisplay" style="font-size:11px;color:var(--purple);margin-top:6px;font-family:'JetBrains Mono',monospace;display:none;"></div>
+        <div style="display:flex;gap:7px;margin-top:12px;flex-wrap:wrap;">
+          <span class="chip chip-g">Verified ✓</span>
+          <span class="chip chip-b">Active</span>
+          <span id="walletChip" style="display:none;" class="chip chip-p">🔗 Wallet Connected</span>
+        </div>
+      </div>
+      <div class="panel" style="margin-bottom:14px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">Account Summary</div>
+        <div style="display:grid;gap:8px;">
+          <div class="kv"><span style="color:var(--text3);">Member Since</span><span id="pSince" style="font-family:'JetBrains Mono',monospace;">—</span></div>
+          <div class="kv"><span style="color:var(--text3);">Login Method</span><span id="pMethod" style="font-family:'JetBrains Mono',monospace;color:var(--purple);">—</span></div>
+          <div class="kv"><span style="color:var(--text3);">Total Deposited</span><span id="pDep" style="font-family:'JetBrains Mono',monospace;color:var(--blue);">$0.00</span></div>
+          <div class="kv"><span style="color:var(--text3);">Total Earned</span><span id="pEarned" style="font-family:'JetBrains Mono',monospace;color:var(--green);">$0.00</span></div>
+          <div class="kv"><span style="color:var(--text3);">Available Balance</span><span id="pBal" style="font-family:'JetBrains Mono',monospace;color:var(--gold);">$0.00</span></div>
+        </div>
+      </div>
+      <button class="btn btn-red btn-full" onclick="doLogout()" style="padding:12px;">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="ni active" id="nav-home" onclick="showSec('secHome');setNav('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home
+    </div>
+    <div class="ni" id="nav-deposit" onclick="showSec('secDeposit');setNav('deposit')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>Deposit
+    </div>
+    <div class="ni" id="nav-withdraw" onclick="showSec('secWithdraw');setNav('withdraw')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>Withdraw
+    </div>
+    <div class="ni" id="nav-stakes" onclick="showSec('secStakes');setNav('stakes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Stakes
+    </div>
+    <div class="ni" id="nav-tx" onclick="showSec('secTx');setNav('tx')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>History
+    </div>
+    <div class="ni" id="nav-profile" onclick="showSec('secProfile');setNav('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Account
+    </div>
+    <div class="ni" id="nav-support" onclick="showSec('secSupport');setNav('support')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Support
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-bg hidden" id="stakeModal">
+  <div class="modal">
+    <div class="modal-h">Stake <span id="mCoin">USDT</span></div>
+    <div class="modal-s" id="mInfo">14% APY · 30 Day Lock</div>
+    <div class="fld"><label>Amount (USD)</label>
+      <input type="range" id="sRange" min="10" max="10000" value="100" oninput="updStake()">
+      <input class="amt-inp" type="number" id="sAmt" value="100" oninput="updStake()">
+      <div class="quick-row"><span class="qb" onclick="qst(100)">$100</span><span class="qb" onclick="qst(250)">$250</span><span class="qb" onclick="qst(500)">$500</span><span class="qb" onclick="qst(1000)">$1K</span></div>
+    </div>
+    <div class="preview">
+      <div class="pr"><span style="color:var(--text3);">APY</span><span id="pAPY" style="color:var(--green);">14%</span></div>
+      <div class="pr"><span style="color:var(--text3);">Lock Period</span><span id="pDays">30 Days</span></div>
+      <div class="pr"><span style="color:var(--text3);">Expected Return</span><span id="pRet" style="color:var(--green);">$0.00</span></div>
+      <div class="pr"><span>Total at Maturity</span><span id="pTot" style="color:var(--gold);">$0.00</span></div>
+    </div>
+    <div class="mact">
+      <button class="btn btn-outline" onclick="closeM('stakeModal')">Cancel</button>
+      <button class="btn btn-primary" style="flex:2;" onclick="confirmStake()">Confirm Stake →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="flexDepModal">
+  <div class="modal">
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:4px;"><span style="font-size:20px;">🔓</span><div class="modal-h">Flexible Pool</div><span class="badge badge-flex" style="margin-left:auto;">14% APY</span></div>
+    <div class="modal-s">No lock · Add or withdraw anytime · Daily rewards</div>
+    <div class="minfo">
+      <div class="mrow"><span style="color:var(--text3);">Currently Staked</span><span style="font-family:'JetBrains Mono',monospace;color:var(--purple);">$<span id="fmStaked">0.00</span></span></div>
+      <div class="mrow"><span style="color:var(--text3);">Wallet Balance</span><span style="font-family:'JetBrains Mono',monospace;color:var(--green);">$<span id="fmBal">0.00</span></span></div>
+    </div>
+    <div class="fld"><label>Deposit Amount</label>
+      <input class="amt-inp" type="number" id="fdAmt" placeholder="Min $5">
+      <div class="quick-row"><span class="qb" onclick="qi('fdAmt',10)">$10</span><span class="qb" onclick="qi('fdAmt',25)">$25</span><span class="qb" onclick="qi('fdAmt',50)">$50</span><span class="qb" onclick="qi('fdAmt',100)">$100</span><span class="qb" onclick="qi('fdAmt',S.bal)">MAX</span></div>
+    </div>
+    <div style="background:rgba(0,200,150,.05);border:1px solid rgba(0,200,150,.15);border-radius:8px;padding:11px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.8;">
+      ✓ Withdraw partial or full anytime · No penalties<br>✓ Daily rewards at 0.038%/day (14% APY)
+    </div>
+    <div class="mact">
+      <button class="btn btn-outline" onclick="closeM('flexDepModal')">Cancel</button>
+      <button class="btn btn-purple" style="flex:2;" onclick="confirmFlexDep()">Start Earning →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg hidden" id="flexWdModal">
+  <div class="modal">
+    <div class="modal-h">Withdraw from Flexible Pool</div>
+    <div class="modal-s">No penalties. Choose how much to withdraw.</div>
+    <div class="minfo">
+      <div class="mrow"><span style="color:var(--text3);">Flexible Balance</span><span style="font-family:'JetBrains Mono',monospace;color:var(--purple);">$<span id="fwAvail">0.00</span></span></div>
+      <div class="mrow"><span style="color:var(--text3);">Total Earned</span><span style="font-family:'JetBrains Mono',monospace;color:var(--green);">$<span id="fwEarned">0.00</span></span></div>
+    </div>
+    <div class="fld"><label>Amount to Withdraw</label>
+      <input type="range" id="fwRange" min="1" max="100" value="50" oninput="updFW()">
+      <input class="amt-inp" type="number" id="fwAmt" placeholder="Amount" oninput="updFW()">
+      <div class="quick-row"><span class="qb" onclick="setFWP(25)">25%</span><span class="qb" onclick="setFWP(50)">50%</span><span class="qb" onclick="setFWP(75)">75%</span><span class="qb" onclick="setFWP(100)">100%</span></div>
+    </div>
+    <div class="fld"><label>Destination Address</label><input type="text" id="fwAddr" placeholder="BEP20 or TRC20 address"></div>
+    <div style="background:var(--bg2);border-radius:8px;padding:10px 13px;margin-bottom:13px;font-size:13px;display:flex;justify-content:space-between;">
+      <span style="color:var(--text3);">Remaining in pool</span><span id="fwRemain" style="font-family:'JetBrains Mono',monospace;color:var(--purple);">$0.00</span>
+    </div>
+    <div class="mact">
+      <button class="btn btn-outline" onclick="closeM('flexWdModal')">Cancel</button>
+      <button class="btn btn-green" style="flex:2;" onclick="confirmFW()">Withdraw Now →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let S={user:null,dep:0,earned:0,bal:0,txs:[],stakes:[],flex:{staked:0,earned:0},wallet:null};
+let curPool=null;
+let authMode='login';
+let wcProvider=null;
+
+const POOLS={
+  'flex':  {coin:'Flexible Pool',apy:14,days:0,  min:5,  net:'BEP20/TRC20',flex:true},
+  'u-bep': {coin:'USDT (BEP20)', apy:14,days:30, min:10, net:'BEP20'},
+  'u-trc': {coin:'USDT (TRC20)', apy:14,days:60, min:25, net:'TRC20'},
+  'bnb':   {coin:'BNB',          apy:14,days:90, min:50, net:'BEP20'},
+  'trx':   {coin:'TRX',          apy:14,days:180,min:100,net:'TRC20'}
+};
+const ADDRS={BEP20:'0x78209a6b829a82e9d440bad4182b040186f78bff',TRC20:'THrB7Yr4CCeqNTCSWvgFESbj9FWAeZpGVa'};
+
+function saveS(){localStorage.setItem('yv_state',JSON.stringify({dep:S.dep,earned:S.earned,bal:S.bal,txs:S.txs,stakes:S.stakes,flex:S.flex,wallet:S.wallet}));}
+function loadS(){const d=localStorage.getItem('yv_state');if(d)try{Object.assign(S,JSON.parse(d));}catch{}}
+
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg,type=''){
+  const el=document.createElement('div');
+  el.className='ti'+(type?' '+type:'');
+  el.innerHTML=`<div class="ti-dot"></div><span>${msg}</span>`;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(()=>el.remove(),4000);
+}
+
+// ============================================================
+// PAGE / SECTION
+// ============================================================
+function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));document.getElementById(id).classList.add('on');}
+const SECS=['secHome','secDeposit','secWithdraw','secStakes','secTx','secSupport','secProfile'];
+function showSec(id){SECS.forEach(s=>{const el=document.getElementById(s);if(el)el.classList.toggle('on',s===id);});}
+function setNav(k){document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));const el=document.getElementById('nav-'+k);if(el)el.classList.add('active');}
+function closeM(id){document.getElementById(id).classList.add('hidden');}
+function qi(id,v){document.getElementById(id).value=v;}
+
+// ============================================================
+// AUTH — EMAIL
+// ============================================================
+function toggleAuth(){
+  authMode=authMode==='login'?'reg':'login';
+  document.getElementById('aBtnTxt').textContent=authMode==='login'?'Sign In':'Create Account';
+  document.getElementById('aSwitchTxt').textContent=authMode==='login'?'New to YieldVault?':'Already have an account?';
+  document.querySelector('.auth-switch a').textContent=authMode==='login'?'Create account':'Sign in';
+  document.getElementById('aNameFld').style.display=authMode==='reg'?'block':'none';
+}
+function doAuth(){
+  const email=document.getElementById('aEmail').value.trim();
+  const pass=document.getElementById('aPass').value;
+  const name=document.getElementById('aName').value.trim();
+  if(!email||!pass){toast('Email and password required','err');return;}
+  if(!email.includes('@')){toast('Invalid email address','err');return;}
+  if(pass.length<6){toast('Password must be 6+ characters','err');return;}
+  const uname=authMode==='reg'?(name||email.split('@')[0]):(localStorage.getItem('yv_name')||email.split('@')[0]);
+  localStorage.setItem('yv_email',email);
+  localStorage.setItem('yv_name',uname);
+  if(!localStorage.getItem('yv_joined'))localStorage.setItem('yv_joined',new Date().toLocaleDateString());
+  loadS();
+  loginUser(uname,email,'Email');
+  toast(authMode==='reg'?'Account created! Welcome 🎉':'Welcome back!','ok');
+}
+
+// ============================================================
+// WALLET CONNECT — TRUST WALLET (Deep Link + WalletConnect)
+// ============================================================
+async function connectTrustWallet(){
+  const wopt=document.getElementById('wopt-trust');
+  wopt.classList.add('connecting');
+  document.getElementById('tw-arr').textContent='⏳';
+  toast('Connecting Trust Wallet...','warn');
+
+  // Try WalletConnect (works for both mobile Trust Wallet & desktop)
+  try{
+    await connectViaWalletConnect('trust');
+  }catch(e){
+    wopt.classList.remove('connecting');
+    document.getElementById('tw-arr').textContent='›';
+    toast('Trust Wallet connection failed. Try WalletConnect option.','err');
+  }
+}
+
+// ============================================================
+// WALLET CONNECT — METAMASK (Direct window.ethereum)
+// ============================================================
+async function connectMetaMask(){
+  const wopt=document.getElementById('wopt-mm');
+  wopt.classList.add('connecting');
+  document.getElementById('mm-arr').textContent='⏳';
+  toast('Connecting MetaMask...','warn');
+
+  try{
+    if(typeof window.ethereum==='undefined'){
+      toast('MetaMask not found. Please install MetaMask extension.','err');
+      window.open('https://metamask.io','_blank');
+      wopt.classList.remove('connecting');
+      document.getElementById('mm-arr').textContent='›';
+      return;
+    }
+    const accounts=await window.ethereum.request({method:'eth_requestAccounts'});
+    if(accounts.length>0){
+      const addr=accounts[0];
+      wopt.classList.remove('connecting');
+      wopt.classList.add('connected');
+      document.getElementById('mm-arr').textContent='✓';
+      onWalletConnected(addr,'MetaMask');
+    }
+  }catch(e){
+    wopt.classList.remove('connecting');
+    document.getElementById('mm-arr').textContent='›';
+    if(e.code===4001)toast('MetaMask connection rejected by user','err');
+    else toast('MetaMask error: '+e.message,'err');
+  }
+}
+
+// ============================================================
+// WALLET CONNECT — WALLETCONNECT v1 (Universal QR)
+// ============================================================
+async function connectWalletConnect(){
+  const wopt=document.getElementById('wopt-wc');
+  wopt.classList.add('connecting');
+  document.getElementById('wc-arr').textContent='⏳';
+  toast('Initializing WalletConnect...','warn');
+  await connectViaWalletConnect('wc');
+}
+
+async function connectViaWalletConnect(type){
+  try{
+    if(typeof WalletConnectProvider==='undefined'){
+      throw new Error('WalletConnect library not loaded');
+    }
+    wcProvider=new WalletConnectProvider.default({
+      rpc:{
+        56:'https://bsc-dataseed.binance.org/',
+        1:'https://cloudflare-eth.com',
+      },
+      qrcode:true,
+      qrcodeModalOptions:{mobileLinks:['trust','metamask','rainbow','argent','imtoken']},
+    });
+
+    wcProvider.on('accountsChanged',(accounts)=>{
+      if(accounts.length>0)onWalletConnected(accounts[0],type==='trust'?'Trust Wallet':'WalletConnect');
+    });
+    wcProvider.on('disconnect',()=>{disconnectWallet();});
+
+    await wcProvider.enable();
+    const accounts=wcProvider.accounts;
+    if(accounts&&accounts.length>0){
+      const woptId=type==='trust'?'wopt-trust':'wopt-wc';
+      const arrId=type==='trust'?'tw-arr':'wc-arr';
+      document.getElementById(woptId).classList.remove('connecting');
+      document.getElementById(woptId).classList.add('connected');
+      document.getElementById(arrId).textContent='✓';
+      onWalletConnected(accounts[0],type==='trust'?'Trust Wallet':'WalletConnect');
+    }
+  }catch(e){
+    const woptId=type==='trust'?'wopt-trust':'wopt-wc';
+    const arrId=type==='trust'?'tw-arr':'wc-arr';
+    document.getElementById(woptId).classList.remove('connecting');
+    document.getElementById(arrId).textContent='›';
+    if(e.message&&e.message.includes('User closed')){
+      toast('Wallet connection cancelled','warn');
+    }else{
+      toast('Connection error: '+(e.message||'Unknown error'),'err');
+    }
+  }
+}
+
+function onWalletConnected(address,walletType){
+  S.wallet={type:walletType,address,connected:true};
+  const name=walletType+' User';
+  const email=address.slice(0,10).toLowerCase()+'@wallet.web3';
+  localStorage.setItem('yv_email',email);
+  localStorage.setItem('yv_name',name);
+  if(!localStorage.getItem('yv_joined'))localStorage.setItem('yv_joined',new Date().toLocaleDateString());
+  loadS();S.wallet={type:walletType,address,connected:true};
+  loginUser(name,email,walletType);
+  toast(`${walletType} connected: ${address.slice(0,8)}...${address.slice(-4)}`,'ok');
+}
+
+function disconnectWallet(){
+  if(wcProvider&&wcProvider.connected){wcProvider.disconnect();}
+  S.wallet=null;
+  document.querySelectorAll('.wopt').forEach(w=>{w.classList.remove('connected','connecting');});
+  ['tw-arr','mm-arr','wc-arr'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='›';});
+  toast('Wallet disconnected');
+  doLogout();
+}
+
+function useConnectedWallet(){
+  if(S.wallet&&S.wallet.address){
+    document.getElementById('wdAddr').value=S.wallet.address;
+    toast('Connected wallet address filled','ok');
+  }
+}
+
+// ============================================================
+// LOGIN USER
+// ============================================================
+function loginUser(name,email,method){
+  S.user={name,email,method:method||'Email'};
+  document.getElementById('profAv').textContent=name[0].toUpperCase();
+  document.getElementById('profName').textContent=name;
+  document.getElementById('profEmail').textContent=email;
+  document.getElementById('pSince').textContent=localStorage.getItem('yv_joined')||'Today';
+  document.getElementById('pMethod').textContent=method||'Email';
+
+  if(S.wallet){
+    const shortAddr=S.wallet.address.slice(0,8)+'...'+S.wallet.address.slice(-4);
+    document.getElementById('walletNavBadge').style.display='flex';
+    document.getElementById('walletShortAddr').textContent=shortAddr;
+    document.getElementById('walletAddrDisplay').style.display='block';
+    document.getElementById('walletAddrDisplay').textContent=S.wallet.address;
+    document.getElementById('walletChip').style.display='inline-flex';
+    document.getElementById('walletStatusBar').style.display='flex';
+    document.getElementById('wsAddr').textContent=S.wallet.address;
+    document.getElementById('walletDepositInfo').style.display='flex';
+    document.getElementById('wDepAddr').textContent=S.wallet.address;
+    document.getElementById('useWalletBtn').style.display='block';
+  }
+
+  updateUI();
+  initFeed();
+  fetchPrices();
+  showPage('mainPage');
+}
+
+function doLogout(){
+  saveS();S.user=null;S.wallet=null;
+  document.getElementById('walletNavBadge').style.display='none';
+  showPage('authPage');
+  toast('Signed out');
+}
+
+// ============================================================
+// UI UPDATE
+// ============================================================
+function updateUI(){
+  const ae=(S.earned+(S.flex.earned||0));
+  document.getElementById('sDep').textContent=S.dep.toFixed(2);
+  document.getElementById('sEarned').textContent=ae.toFixed(2);
+  document.getElementById('sBal').textContent=S.bal.toFixed(2);
+  document.getElementById('sStakes').textContent=S.stakes.filter(x=>x.active).length+(S.flex.staked>0?1:0);
+  document.getElementById('avBal').textContent=S.bal.toFixed(2);
+  document.getElementById('pDep').textContent='$'+S.dep.toFixed(2);
+  document.getElementById('pEarned').textContent='$'+ae.toFixed(2);
+  document.getElementById('pBal').textContent='$'+S.bal.toFixed(2);
+  updFlexPanel();renderStakes();renderTx();saveS();
+}
+
+// ============================================================
+// LIVE BINANCE PRICES
+// ============================================================
+async function fetchPrices(){
+  try{
+    const r=await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT","BNBUSDT","TRXUSDT"]');
+    if(!r.ok)throw new Error();
+    const data=await r.json();
+    data.forEach(t=>{
+      const sym=t.symbol.replace('USDT','').toLowerCase();
+      const p=parseFloat(t.lastPrice);
+      const c=parseFloat(t.priceChangePercent);
+      const pEl=document.getElementById('t-'+sym);
+      const cEl=document.getElementById('tc-'+sym);
+      if(pEl){pEl.textContent='$'+(p>100?p.toFixed(2):p>1?p.toFixed(4):p.toFixed(5));}
+      if(cEl){cEl.textContent=(c>=0?'+':'')+c.toFixed(2)+'%';cEl.className='tchg '+(c>=0?'up':'dn');}
+    });
+  }catch{
+    // fallback
+    const fb={btc:'$104,520',eth:'$3,840',bnb:'$609',trx:'$0.2481'};
+    Object.entries(fb).forEach(([k,v])=>{const el=document.getElementById('t-'+k);if(el&&el.textContent==='Loading...')el.textContent=v;});
+  }
+  setTimeout(fetchPrices,30000);
+}
+
+// ============================================================
+// LIVE FEED
+// ============================================================
+const FU=['Alex M.','David K.','Sarah T.','Michael R.','Priya S.','James L.','Anna B.','Omar H.','Liu W.','Carlos M.','Nina P.','Hassan A.','Riya S.','Chen W.'];
+const FP=['Flexible Pool','USDT BEP20','USDT TRC20','BNB Vault','TRX Elite'];
+const FA=[250,500,1000,1500,2000,750,300,2500,5000,3000,1200,800];
+const FC=['linear-gradient(135deg,#2d9cdb,#6c63ff)','linear-gradient(135deg,#00c896,#0088cc)','linear-gradient(135deg,#9b59b6,#2d9cdb)','linear-gradient(135deg,#f2c94c,#e67e22)'];
+function makeFI(){
+  const u=FU[Math.floor(Math.random()*FU.length)];
+  const p=FP[Math.floor(Math.random()*FP.length)];
+  const a=FA[Math.floor(Math.random()*FA.length)];
+  const c=FC[Math.floor(Math.random()*FC.length)];
+  const m=Math.floor(Math.random()*8)+1;
+  const el=document.createElement('div');el.className='fitem';
+  el.innerHTML=`<div class="fav" style="background:${c};">${u.split(' ').map(x=>x[0]).join('')}</div>
+    <div class="finfo"><div class="fuser">${u}</div><div class="fdetail">Staked in ${p}</div></div>
+    <div class="famt">+$${a.toLocaleString()}</div>
+    <div class="ftime">${m}m ago</div>`;
+  return el;
+}
+function initFeed(){
+  const fl=document.getElementById('feedList');if(!fl)return;fl.innerHTML='';
+  for(let i=0;i<5;i++)fl.appendChild(makeFI());
+  setInterval(()=>{const fl=document.getElementById('feedList');if(!fl)return;if(fl.children.length>=6)fl.removeChild(fl.lastChild);fl.insertBefore(makeFI(),fl.firstChild);},4000);
+}
+
+// ============================================================
+// DEPOSIT / WITHDRAW
+// ============================================================
+function switchNet(n){
+  document.getElementById('dAddr').textContent=ADDRS[n];
+  document.getElementById('netLbl').textContent=n==='BEP20'?'Binance Smart Chain — BEP20':'TRON Network — TRC20';
+  document.getElementById('netNm').textContent=n;
+  document.getElementById('ntBEP').classList.toggle('active',n==='BEP20');
+  document.getElementById('ntTRC').classList.toggle('active',n==='TRC20');
+}
+function copyAddr(){
+  navigator.clipboard.writeText(document.getElementById('dAddr').textContent.trim())
+    .then(()=>toast('Address copied!','ok'))
+    .catch(()=>toast('Copy manually from above'));
+}
+function submitDeposit(){
+  const amt=parseFloat(document.getElementById('depAmt').value);
+  const tx=document.getElementById('depTx').value.trim();
+  const net=document.getElementById('depNet').value;
+  if(!amt||amt<5){toast('Minimum deposit is $5','err');return;}
+  if(!tx){toast('Please enter transaction hash','err');return;}
+  S.txs.unshift({id:Date.now(),type:'Deposit',amount:amt,network:net.includes('BEP')?'BEP20':'TRC20',tx,date:new Date().toLocaleDateString(),status:'pending'});
+  S.dep+=amt;S.bal+=amt;
+  document.getElementById('depAmt').value='';document.getElementById('depTx').value='';
+  updateUI();toast(`$${amt.toLocaleString()} deposit submitted — pending confirmation ⏳`,'ok');
+}
+function submitWithdraw(){
+  const amt=parseFloat(document.getElementById('wdAmt').value);
+  const addr=document.getElementById('wdAddr').value.trim();
+  const net=document.getElementById('wdNet').value;
+  if(!amt||amt<10){toast('Minimum withdrawal is $10','err');return;}
+  if(!addr){toast('Enter your wallet address','err');return;}
+  if(amt>S.bal){toast('Insufficient balance','err');return;}
+  S.bal-=amt;
+  S.txs.unshift({id:Date.now(),type:'Withdrawal',amount:amt,network:net.includes('BEP')?'BEP20':'TRC20',tx:addr.slice(0,16)+'...',date:new Date().toLocaleDateString(),status:'pending'});
+  const h=document.getElementById('wdHist');
+  const row=document.createElement('div');row.style.cssText='padding:10px 0;border-bottom:1px solid rgba(148,210,255,0.05);';
+  row.innerHTML=`<div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--blue);">$${amt.toFixed(2)} → ${addr.slice(0,20)}...</div><div style="font-size:10px;color:var(--text3);margin-top:3px;">${net.includes('BEP')?'BEP20':'TRC20'} · ${new Date().toLocaleDateString()} · <span style="color:var(--gold);">Processing 24-48h</span></div>`;
+  if(h.textContent.includes('No withdrawal'))h.innerHTML='';
+  h.prepend(row);
+  document.getElementById('wdAmt').value='';document.getElementById('wdAddr').value='';
+  updateUI();toast(`$${amt.toLocaleString()} withdrawal submitted`,'ok');
+}
+
+// ============================================================
+// STAKING
+// ============================================================
+function openStake(key){
+  if(key==='flex'){
+    document.getElementById('fmStaked').textContent=S.flex.staked.toFixed(2);
+    document.getElementById('fmBal').textContent=S.bal.toFixed(2);
+    document.getElementById('fdAmt').value='';
+    document.getElementById('flexDepModal').classList.remove('hidden');return;
+  }
+  curPool={...POOLS[key],key};
+  document.getElementById('mCoin').textContent=curPool.coin;
+  document.getElementById('mInfo').textContent=`${curPool.apy}% APY · ${curPool.days} Day Lock · Min $${curPool.min}`;
+  document.getElementById('pAPY').textContent=curPool.apy+'%';
+  document.getElementById('pDays').textContent=curPool.days+' Days';
+  document.getElementById('sAmt').value=curPool.min;
+  document.getElementById('sRange').min=curPool.min;
+  document.getElementById('sRange').value=curPool.min;
+  updStake();document.getElementById('stakeModal').classList.remove('hidden');
+}
+function qst(v){document.getElementById('sAmt').value=v;document.getElementById('sRange').value=Math.min(v,10000);updStake();}
+function updStake(){
+  const a=parseFloat(document.getElementById('sAmt').value)||0;
+  document.getElementById('sRange').value=Math.min(a,10000);
+  if(!curPool)return;
+  const r=a*(curPool.apy/100)*(curPool.days/365);
+  document.getElementById('pRet').textContent='$'+r.toFixed(2);
+  document.getElementById('pTot').textContent='$'+(a+r).toFixed(2);
+}
+function confirmStake(){
+  const a=parseFloat(document.getElementById('sAmt').value);
+  if(!a||a<curPool.min){toast(`Minimum is $${curPool.min}`,'err');return;}
+  if(a>S.bal){toast('Insufficient balance — deposit first','err');return;}
+  const r=a*(curPool.apy/100)*(curPool.days/365);
+  S.stakes.unshift({id:Date.now(),coin:curPool.coin,apy:curPool.apy,days:curPool.days,amount:a,expectedReturn:r,start:new Date().toLocaleDateString(),end:new Date(Date.now()+curPool.days*86400000).toLocaleDateString(),active:true,net:curPool.net});
+  S.txs.unshift({id:Date.now(),type:'Stake',amount:a,network:curPool.net,tx:'STAKE-'+Date.now(),date:new Date().toLocaleDateString(),status:'completed'});
+  S.bal-=a;S.earned+=r;closeM('stakeModal');
+  updateUI();toast(`$${a.toLocaleString()} staked! Expected +$${r.toFixed(2)} 🚀`,'ok');
+  showSec('secStakes');setNav('stakes');
+}
+function confirmFlexDep(){
+  const a=parseFloat(document.getElementById('fdAmt').value);
+  if(!a||a<5){toast('Minimum is $5','err');return;}
+  if(a>S.bal){toast('Insufficient balance','err');return;}
+  S.bal-=a;S.flex.staked=(S.flex.staked||0)+a;
+  S.flex.earned=(S.flex.earned||0)+a*(0.14/365);
+  S.txs.unshift({id:Date.now(),type:'Flex Stake',amount:a,network:'BEP20/TRC20',tx:'FLEX-'+Date.now(),date:new Date().toLocaleDateString(),status:'completed'});
+  closeM('flexDepModal');updateUI();toast(`$${a.toLocaleString()} added to Flexible Pool! 📈`,'ok');
+  showSec('secStakes');setNav('stakes');
+}
+function updFlexPanel(){
+  const has=S.flex.staked>0;
+  document.getElementById('flexPanel').style.display=has?'block':'none';
+  if(has){
+    document.getElementById('fpStaked').textContent=S.flex.staked.toFixed(2);
+    document.getElementById('fpToday').textContent=(S.flex.staked*(0.14/365)).toFixed(4);
+    document.getElementById('fpTotal').textContent=(S.flex.earned||0).toFixed(4);
+  }
+}
+function openFlexAdd(){document.getElementById('fmStaked').textContent=S.flex.staked.toFixed(2);document.getElementById('fmBal').textContent=S.bal.toFixed(2);document.getElementById('fdAmt').value='';document.getElementById('flexDepModal').classList.remove('hidden');}
+function openFlexWd(){
+  document.getElementById('fwAvail').textContent=S.flex.staked.toFixed(2);
+  document.getElementById('fwEarned').textContent=(S.flex.earned||0).toFixed(4);
+  document.getElementById('fwRange').max=S.flex.staked;
+  document.getElementById('fwRange').value=50;
+  document.getElementById('fwAmt').value=(S.flex.staked/2).toFixed(2);
+  updFW();document.getElementById('flexWdModal').classList.remove('hidden');
+}
+function openFlexWdAll(){
+  if(!S.flex.staked){toast('No flexible balance','err');return;}
+  document.getElementById('fwAvail').textContent=S.flex.staked.toFixed(2);
+  document.getElementById('fwEarned').textContent=(S.flex.earned||0).toFixed(4);
+  document.getElementById('fwRange').max=S.flex.staked;
+  document.getElementById('fwRange').value=100;
+  document.getElementById('fwAmt').value=S.flex.staked.toFixed(2);
+  updFW();document.getElementById('flexWdModal').classList.remove('hidden');
+}
+function updFW(){
+  const a=parseFloat(document.getElementById('fwAmt').value)||0;
+  document.getElementById('fwRemain').textContent='$'+Math.max(0,S.flex.staked-a).toFixed(2);
+  if(S.flex.staked>0)document.getElementById('fwRange').value=(a/S.flex.staked*100);
+}
+function setFWP(p){const v=(S.flex.staked*(p/100)).toFixed(2);document.getElementById('fwAmt').value=v;document.getElementById('fwRange').value=p;updFW();}
+function confirmFW(){
+  const a=parseFloat(document.getElementById('fwAmt').value);
+  const addr=document.getElementById('fwAddr').value.trim();
+  if(!a||a<1){toast('Enter valid amount','err');return;}
+  if(!addr){toast('Enter wallet address','err');return;}
+  if(a>S.flex.staked){toast('Exceeds flexible balance','err');return;}
+  S.flex.staked-=a;S.bal+=a;if(S.flex.staked<0.01)S.flex.staked=0;
+  S.txs.unshift({id:Date.now(),type:'Flex Withdraw',amount:a,network:'BEP20/TRC20',tx:addr.slice(0,16)+'...',date:new Date().toLocaleDateString(),status:'pending'});
+  closeM('flexWdModal');updateUI();toast(`$${a.toFixed(2)} withdrawal submitted ✓`,'ok');
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+const TI={'Deposit':'↓','Withdrawal':'↑','Stake':'⬡','Flex Stake':'🔓','Flex Withdraw':'↑'};
+const TC={'Deposit':'var(--green)','Withdrawal':'var(--red)','Stake':'var(--blue)','Flex Stake':'var(--purple)','Flex Withdraw':'var(--red)'};
+function renderTx(){
+  const w=document.getElementById('txList');
+  if(!S.txs.length){w.innerHTML='<div style="color:var(--text3);font-size:13px;text-align:center;padding:40px;">No transactions yet</div>';return;}
+  w.innerHTML=S.txs.slice(0,30).map(t=>`
+    <div class="tx-row">
+      <div class="tx-tc"><div class="tx-ico" style="background:rgba(45,156,219,.08);color:${TC[t.type]||'var(--text)'};">${TI[t.type]||'•'}</div><span>${t.type}</span></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-weight:600;color:${TC[t.type]||'var(--text)'};">${t.type.includes('Withdraw')||t.type==='Withdrawal'?'-':'+'}$${t.amount.toFixed(2)}</div>
+      <div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;">${t.network}</div>
+      <div style="font-size:12px;color:var(--text3);">${t.date}</div>
+      <div><span class="s-pill ${t.status==='completed'?'s-ok':'s-pend'}">${t.status==='completed'?'✓ Done':'⏳ Pending'}</span></div>
+    </div>`).join('');
+}
+function renderStakes(){
+  const w=document.getElementById('stakesList');
+  const active=S.stakes.filter(x=>x.active);
+  if(!active.length){w.innerHTML=`<div style="color:var(--text3);font-size:13px;text-align:center;padding:32px 0;">No fixed stakes active. <a style="color:var(--accent);cursor:pointer;" onclick="showSec('secHome');setNav('home')">Browse pools →</a></div>`;return;}
+  w.innerHTML=active.map(s=>`
+    <div class="stake-card">
+      <div class="sk-l"><div class="sk-ico" style="background:rgba(45,156,219,.1);">₮</div>
+        <div><div style="font-weight:600;">${s.coin}</div><div style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;">${s.apy}% APY · ${s.days} days</div></div>
+      </div>
+      <div class="sk-vals">
+        <div><div class="sv-l">Staked</div><div class="sv-v" style="color:var(--blue);">$${s.amount.toFixed(2)}</div></div>
+        <div><div class="sv-l">Expected</div><div class="sv-v" style="color:var(--green);">+$${s.expectedReturn.toFixed(2)}</div></div>
+        <div><div class="sv-l">Matures</div><div class="sv-v">${s.end}</div></div>
+      </div>
+      <span class="chip chip-g">Active</span>
+    </div>`).join('');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+(function(){
+  // Check admin hash first
+  if(window.location.hash==='#admin'){
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+    document.getElementById('adminPage').style.display='block';
+    return;
+  }
+  const email=localStorage.getItem('yv_email');
+  if(email){
+    loadS();
+    const name=localStorage.getItem('yv_name')||'User';
+    const method=S.wallet?S.wallet.type:'Email';
+    loginUser(name,email,method);
+  }
+})();
+
+// ============================================================
+// ADMIN SYSTEM
+// ============================================================
+const ADMIN_CREDS={u:'Hassan1214',p:'H@ssan1214'};
+let AD={users:[],deposits:[],withdrawals:[],stakes:[],settings:{dep:true,wd:true,flex:true,apy:'14%',fee:'1%'}};
+let admEditKey=null;
+
+function saveAD(){localStorage.setItem('yv_ad',JSON.stringify(AD));}
+function loadAD(){const d=localStorage.getItem('yv_ad');if(d)try{Object.assign(AD,JSON.parse(d));}catch{}}
+
+function syncToAD(){
+  if(!S.user)return;
+  const idx=AD.users.findIndex(u=>u.email===S.user.email);
+  const ud={id:S.user.email,name:S.user.name,email:S.user.email,balance:S.bal,deposited:S.dep,earned:S.earned,status:'active',joined:localStorage.getItem('yv_joined')||new Date().toLocaleDateString()};
+  if(idx>=0)AD.users[idx]={...AD.users[idx],...ud};
+  else AD.users.push(ud);
+  S.txs.forEach(tx=>{
+    if((tx.type==='Deposit'||tx.type==='Flex Stake')&&!AD.deposits.find(x=>x.id===tx.id))
+      AD.deposits.push({...tx,user:S.user.name,email:S.user.email});
+    if((tx.type==='Withdrawal'||tx.type==='Flex Withdraw')&&!AD.withdrawals.find(x=>x.id===tx.id))
+      AD.withdrawals.push({...tx,user:S.user.name,email:S.user.email});
+    if(tx.type==='Stake'&&!AD.stakes.find(x=>x.id===tx.id))
+      AD.stakes.push({...tx,user:S.user.name,email:S.user.email});
+  });
+  saveAD();
+}
+
+function doAdminLogin(){
+  const u=document.getElementById('adU').value.trim();
+  const p=document.getElementById('adP').value;
+  if(u===ADMIN_CREDS.u&&p===ADMIN_CREDS.p){
+    loadAD();
+    document.getElementById('adminLogin').style.display='none';
+    document.getElementById('adminDash').style.display='block';
+    updateAdmStats();renderAdmPendingDeps();
+    startAdmClock();
+    toast('Welcome Hassan!','ok');
+  }else{
+    document.getElementById('adminErr').style.display='block';
+    document.getElementById('adP').value='';
+    setTimeout(()=>document.getElementById('adminErr').style.display='none',3000);
+  }
+}
+function doAdminLogout(){
+  document.getElementById('adminDash').style.display='none';
+  document.getElementById('adminLogin').style.display='flex';
+  document.getElementById('adU').value='';document.getElementById('adP').value='';
+}
+function startAdmClock(){
+  function t(){const e=document.getElementById('admClock');if(e)e.textContent=new Date().toLocaleTimeString();}
+  t();setInterval(t,1000);
+}
+function goAdmTab(id){
+  document.querySelectorAll('.adm-sec').forEach(s=>s.classList.remove('on'));
+  document.getElementById('as-'+id).classList.add('on');
+  document.querySelectorAll('.adm-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('at-'+id).classList.add('active');
+  if(id==='users')renderAdmUsers('');
+  if(id==='deposits')renderAdmDeposits('');
+  if(id==='withdrawals')renderAdmWithdrawals();
+  if(id==='stakes')renderAdmStakes();
+}
+function updateAdmStats(){
+  const pendW=AD.withdrawals.filter(w=>w.status==='pending').length;
+  const pendD=AD.deposits.filter(d=>d.status==='pending').length;
+  const totalD=AD.deposits.reduce((a,d)=>a+(d.amount||0),0);
+  const el=id=>document.getElementById(id);
+  if(el('as-users'))el('as-users').textContent=AD.users.length;
+  if(el('as-dep'))el('as-dep').textContent=totalD.toFixed(0);
+  if(el('as-wd'))el('as-wd').textContent=pendW;
+  if(el('as-stakes'))el('as-stakes').textContent=AD.stakes.length;
+  if(el('as-rev'))el('as-rev').textContent=(AD.withdrawals.reduce((a,w)=>a+(w.amount||0)*0.01,0)).toFixed(2);
+  if(el('aBadgeU'))el('aBadgeU').textContent=AD.users.length;
+  if(el('aBadgeD'))el('aBadgeD').textContent=pendD;
+  if(el('aBadgeW'))el('aBadgeW').textContent=pendW;
+  if(el('pendDepCnt'))el('pendDepCnt').textContent=pendD+' pending';
+  if(el('admUserCount'))el('admUserCount').textContent=AD.users.length+' users';
+  if(el('admDepCount'))el('admDepCount').textContent=AD.deposits.length+' records';
+  if(el('admWdCount'))el('admWdCount').textContent=AD.withdrawals.length+' requests';
+}
+function renderAdmPendingDeps(){
+  const pend=AD.deposits.filter(d=>d.status==='pending');
+  const tb=document.getElementById('pendDepTbl');if(!tb)return;
+  if(!pend.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px;">No pending deposits</td></tr>';return;}
+  tb.innerHTML=pend.map(d=>`<tr>
+    <td style="padding:11px 14px;border-bottom:1px solid rgba(148,210,255,0.04);"><b style="color:var(--text);">${d.user||'—'}</b><br><span style="font-size:10px;color:var(--text3);">${d.email||''}</span></td>
+    <td style="padding:11px 14px;border-bottom:1px solid rgba(148,210,255,0.04);font-family:'JetBrains Mono',monospace;color:var(--green);">$${(d.amount||0).toFixed(2)}</td>
+    <td style="padding:11px 14px;border-bottom:1px solid rgba(148,210,255,0.04);"><span style="background:rgba(45,156,219,.1);color:var(--blue);padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;">${d.network||'—'}</span></td>
+    <td style="padding:11px 14px;border-bottom:1px solid rgba(148,210,255,0.04);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);">${(d.tx||'').slice(0,18)}...</td>
+    <td style="padding:11px 14px;border-bottom:1px solid rgba(148,210,255,0.04);">
+      <button style="padding:5px 10px;border-radius:6px;border:1px solid rgba(0,200,150,.3);color:var(--green);background:rgba(0,200,150,.06);cursor:pointer;font-size:11px;font-weight:600;margin-right:5px;" onclick="admApproveD('${d.id}')">Approve</button>
+      <button style="padding:5px 10px;border-radius:6px;border:1px solid rgba(255,107,107,.3);color:var(--red);background:rgba(255,107,107,.06);cursor:pointer;font-size:11px;font-weight:600;" onclick="admRejectD('${d.id}')">Reject</button>
+    </td>
+  </tr>`).join('');
+}
+function admApproveD(id){
+  const d=AD.deposits.find(x=>x.id==id);if(!d)return;
+  d.status='approved';
+  const u=AD.users.find(x=>x.email===d.email);
+  if(u){u.balance=(u.balance||0)+(d.amount||0);u.deposited=(u.deposited||0)+(d.amount||0);}
+  saveAD();updateAdmStats();renderAdmPendingDeps();renderAdmDeposits('');
+  toast('Deposit $'+d.amount+' approved','ok');
+}
+function admRejectD(id){
+  const d=AD.deposits.find(x=>x.id==id);if(!d)return;
+  d.status='rejected';saveAD();updateAdmStats();renderAdmPendingDeps();renderAdmDeposits('');
+  toast('Deposit rejected','err');
+}
+function renderAdmUsers(search){
+  const filter=document.getElementById('uFilter')?document.getElementById('uFilter').value:'all';
+  const users=AD.users.filter(u=>{
+    const ms=!search||(u.name||'').toLowerCase().includes(search.toLowerCase())||(u.email||'').toLowerCase().includes(search.toLowerCase());
+    return ms&&(filter==='all'||u.status===filter);
+  });
+  const tb=document.getElementById('admUserTbl');if(!tb)return;
+  if(!users.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">No users</td></tr>';return;}
+  const td='padding:11px 14px;border-bottom:1px solid rgba(148,210,255,0.04);';
+  tb.innerHTML=users.map(u=>`<tr>
+    <td style="${td}"><b style="color:var(--text);">${u.name||'—'}</b></td>
+    <td style="${td}font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);">${u.email||'—'}</td>
+    <td style="${td}font-family:'JetBrains Mono',monospace;color:var(--gold);">$${(u.balance||0).toFixed(2)}</td>
+    <td style="${td}font-family:'JetBrains Mono',monospace;color:var(--blue);">$${(u.deposited||0).toFixed(2)}</td>
+    <td style="${td}"><span style="background:${u.status==='suspended'?'rgba(255,107,107,.1)':'rgba(0,200,150,.1)'};color:${u.status==='suspended'?'var(--red)':'var(--green)'};padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;">${u.status||'active'}</span></td>
+    <td style="${td}">
+      <button style="padding:4px 9px;border-radius:6px;border:1px solid rgba(45,156,219,.3);color:var(--blue);background:rgba(45,156,219,.06);cursor:pointer;font-size:11px;font-weight:600;margin-right:4px;" onclick="admEditBalance('${u.email}')">Balance</button>
+      <button style="padding:4px 9px;border-radius:6px;border:1px solid rgba(255,107,107,.3);color:var(--red);background:rgba(255,107,107,.06);cursor:pointer;font-size:11px;font-weight:600;" onclick="admSuspend('${u.email}')">${u.status==='suspended'?'Unsuspend':'Suspend'}</button>
+    </td>
+  </tr>`).join('');
+}
+function admSuspend(email){const u=AD.users.find(x=>x.email===email);if(u){u.status=u.status==='suspended'?'active':'suspended';saveAD();renderAdmUsers('');toast('User '+u.status,'ok');}}
+function admEditBalance(email){admEditKey={type:'balance',email};const u=AD.users.find(x=>x.email===email);document.getElementById('aeTitle').textContent='Edit Balance: '+(u?u.name:'');document.getElementById('aeLbl').textContent='New Balance (USD)';document.getElementById('aeInput').value=u?(u.balance||0).toFixed(2):'0';document.getElementById('admEditModal').style.display='flex';}
+function openAddUserModal(){document.getElementById('addUserModal').style.display='flex';}
+function doAddUser(){
+  const name=document.getElementById('auN').value.trim();
+  const email=document.getElementById('auE').value.trim();
+  const bal=parseFloat(document.getElementById('auB').value)||0;
+  if(!name||!email){toast('Name and email required','err');return;}
+  AD.users.push({id:email,name,email,balance:bal,deposited:0,earned:0,status:'active',joined:new Date().toLocaleDateString()});
+  saveAD();updateAdmStats();renderAdmUsers('');document.getElementById('addUserModal').style.display='none';
+  document.getElementById('auN').value='';document.getElementById('auE').value='';document.getElementById('auB').value='0';
+  toast('User created','ok');
+}
+function renderAdmDeposits(search){
+  const filter=document.getElementById('dFilter')?document.getElementById('dFilter').value:'all';
+  const deps=AD.deposits.filter(d=>{
+    const ms=!search||(d.user||'').toLowerCase().includes(search.toLowerCase());
+    return ms&&(filter==='all'||d.status===filter);
+  });
+  const tb=document.getElementById('admDepTbl');if(!tb)return;
+  if(!deps.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">No deposits</td></tr>';return;}
+  const td='padding:11px 14px;border-bottom:1px solid rgba(148,210,255,0.04);';
+  tb.innerHTML=deps.map(d=>`<tr>
+    <td style="${td}"><b style="color:var(--text);">${d.user||'—'}</b></td>
+    <td style="${td}font-family:'JetBrains Mono',monospace;color:var(--green);">$${(d.amount||0).toFixed(2)}</td>
+    <td style="${td}"><span style="background:rgba(45,156,219,.1);color:var(--blue);padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;">${d.network||'—'}</span></td>
+    <td style="${td}font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);">${(d.tx||'').slice(0,16)}...</td>
+    <td style="${td}"><span style="background:${d.status==='pending'?'rgba(242,201,76,.1)':d.status==='approved'?'rgba(0,200,150,.1)':'rgba(255,107,107,.1)'};color:${d.status==='pending'?'var(--gold)':d.status==='approved'?'var(--green)':'var(--red)'};padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;">${d.status}</span></td>
+    <td style="${td}">${d.status==='pending'?`<button style="padding:4px 9px;border-radius:6px;border:1px solid rgba(0,200,150,.3);color:var(--green);background:rgba(0,200,150,.06);cursor:pointer;font-size:11px;font-weight:600;margin-right:4px;" onclick="admApproveD('${d.id}')">Approve</button><button style="padding:4px 9px;border-radius:6px;border:1px solid rgba(255,107,107,.3);color:var(--red);background:rgba(255,107,107,.06);cursor:pointer;font-size:11px;font-weight:600;" onclick="admRejectD('${d.id}')">Reject</button>`:'<span style="color:var(--text3);font-size:11px;">Done</span>'}</td>
+  </tr>`).join('');
+}
+function renderAdmWithdrawals(){
+  const tb=document.getElementById('admWdTbl');if(!tb)return;
+  if(!AD.withdrawals.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">No requests</td></tr>';return;}
+  const td='padding:11px 14px;border-bottom:1px solid rgba(148,210,255,0.04);';
+  tb.innerHTML=AD.withdrawals.map(w=>`<tr>
+    <td style="${td}"><b style="color:var(--text);">${w.user||'—'}</b></td>
+    <td style="${td}font-family:'JetBrains Mono',monospace;color:var(--red);">$${(w.amount||0).toFixed(2)}</td>
+    <td style="${td}"><span style="background:rgba(45,156,219,.1);color:var(--blue);padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;">${w.network||'—'}</span></td>
+    <td style="${td}font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);">${(w.tx||'').slice(0,18)}...</td>
+    <td style="${td}"><span style="background:${w.status==='pending'?'rgba(242,201,76,.1)':'rgba(0,200,150,.1)'};color:${w.status==='pending'?'var(--gold)':'var(--green)'};padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;">${w.status}</span></td>
+    <td style="${td}">${w.status==='pending'?`<button style="padding:4px 9px;border-radius:6px;border:1px solid rgba(0,200,150,.3);color:var(--green);background:rgba(0,200,150,.06);cursor:pointer;font-size:11px;font-weight:600;margin-right:4px;" onclick="admProcessW('${w.id}')">Process</button><button style="padding:4px 9px;border-radius:6px;border:1px solid rgba(255,107,107,.3);color:var(--red);background:rgba(255,107,107,.06);cursor:pointer;font-size:11px;font-weight:600;" onclick="admRejectW('${w.id}')">Reject</button>`:'<span style="color:var(--text3);font-size:11px;">Done</span>'}</td>
+  </tr>`).join('');
+}
+function admProcessW(id){const w=AD.withdrawals.find(x=>x.id==id);if(w){w.status='processed';saveAD();updateAdmStats();renderAdmWithdrawals();toast('Withdrawal processed','ok');}}
+function admRejectW(id){const w=AD.withdrawals.find(x=>x.id==id);if(w){w.status='rejected';saveAD();updateAdmStats();renderAdmWithdrawals();toast('Withdrawal rejected','err');}}
+function renderAdmStakes(){
+  const tb=document.getElementById('admStakesTbl');if(!tb)return;
+  if(!AD.stakes.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">No stakes</td></tr>';return;}
+  const td='padding:11px 14px;border-bottom:1px solid rgba(148,210,255,0.04);';
+  tb.innerHTML=AD.stakes.map(s=>`<tr>
+    <td style="${td}"><b style="color:var(--text);">${s.user||'—'}</b></td>
+    <td style="${td}color:var(--text2);">${s.type||'Fixed'}</td>
+    <td style="${td}font-family:'JetBrains Mono',monospace;color:var(--blue);">$${(s.amount||0).toFixed(2)}</td>
+    <td style="${td}"><span style="background:rgba(45,156,219,.1);color:var(--blue);padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;">${s.network||'—'}</span></td>
+    <td style="${td}font-size:11px;color:var(--text3);">${s.date||'—'}</td>
+    <td style="${td}"><span style="background:rgba(0,200,150,.1);color:var(--green);padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;">Active</span></td>
+  </tr>`).join('');
+}
+function admToggle(key){
+  const el=document.getElementById('tog-'+key);
+  const kn=document.getElementById('tknob-'+key);
+  AD.settings[key]=!AD.settings[key];
+  el.style.background=AD.settings[key]?'var(--green)':'var(--border2)';
+  if(kn)kn.style.left=AD.settings[key]?'23px':'3px';
+  saveAD();toast(key+' '+(AD.settings[key]?'enabled':'disabled'),AD.settings[key]?'ok':'err');
+}
+function admEditVal(key,title,curr){
+  admEditKey={type:key};
+  document.getElementById('aeTitle').textContent='Edit: '+title;
+  document.getElementById('aeLbl').textContent=title;
+  document.getElementById('aeInput').value=curr||'';
+  document.getElementById('admEditModal').style.display='flex';
+}
+function saveAdmEdit(){
+  const val=document.getElementById('aeInput').value.trim();
+  if(!val){toast('Value required','err');return;}
+  if(admEditKey){
+    if(admEditKey.type==='balance'){const u=AD.users.find(x=>x.email===admEditKey.email);if(u){u.balance=parseFloat(val)||0;renderAdmUsers('');}}
+    else if(admEditKey.type==='apy'){AD.settings.apy=val;document.getElementById('apyVal').textContent=val;}
+    else if(admEditKey.type==='fee'){AD.settings.fee=val;document.getElementById('feeVal').textContent=val;}
+    else if(admEditKey.type==='bep20'){AD.settings.bep20=val;document.getElementById('bep20Disp').textContent=val.slice(0,8)+'...'+val.slice(-6);}
+    saveAD();
+  }
+  document.getElementById('admEditModal').style.display='none';admEditKey=null;toast('Updated','ok');
+}
+function sendBroadcast(){
+  const msg=document.getElementById('bcMsg').value.trim();
+  const type=document.getElementById('bcType').value;
+  if(!msg){toast('Enter a message','err');return;}
+  const log=document.getElementById('bcLog');
+  if(log.textContent.includes('No messages'))log.innerHTML='';
+  const item=document.createElement('div');
+  item.style.cssText='padding:11px 0;border-bottom:1px solid rgba(148,210,255,0.04);';
+  item.innerHTML=`<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;"><span style="background:rgba(45,156,219,.1);color:var(--blue);padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;">${type}</span><span style="font-size:10px;color:var(--text3);margin-left:auto;font-family:'JetBrains Mono',monospace;">${new Date().toLocaleTimeString()}</span></div><div style="font-size:13px;color:var(--text2);">${msg}</div>`;
+  log.prepend(item);
+  document.getElementById('bcMsg').value='';
+  toast('Message sent','ok');
+}
+
+window.addEventListener('hashchange',function(){if(window.location.hash==='#admin'){document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));document.getElementById('adminPage').style.display='block';}});
+</script>
+
+<!-- ADMIN PAGE -->
+<div id="adminPage" style="display:none;min-height:100vh;">
+  <!-- ADMIN LOGIN -->
+  <div id="adminLogin" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(231,76,60,0.07),transparent);">
+    <div style="width:100%;max-width:360px;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="width:50px;height:50px;background:linear-gradient(135deg,#e74c3c,#c0392b);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:22px;">🛡</div>
+        <div style="font-size:22px;font-weight:800;color:var(--text);">Admin Panel</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:4px;">YieldVault — Restricted Access</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;">
+        <div id="adminErr" style="display:none;background:rgba(235,87,87,.08);border:1px solid rgba(235,87,87,.2);border-radius:8px;padding:10px 13px;font-size:13px;color:var(--red);margin-bottom:13px;">Invalid credentials. Access denied.</div>
+        <div class="fld"><label>Username</label><input type="text" id="adU" placeholder="Admin username" autocomplete="off"></div>
+        <div class="fld"><label>Password</label><input type="password" id="adP" placeholder="Admin password" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+        <button class="btn btn-full" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;" onclick="doAdminLogin()">Access Admin Panel</button>
+        <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--text3);">🔒 Authorized personnel only</div>
+        <div style="text-align:center;margin-top:10px;font-size:11px;">
+          <a style="color:var(--accent);cursor:pointer;" onclick="document.getElementById('adminPage').style.display='none';document.getElementById('authPage').classList.add('on');">← Back to Platform</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN DASHBOARD -->
+  <div id="adminDash" style="display:none;">
+    <nav style="position:sticky;top:0;z-index:200;height:56px;background:rgba(4,8,16,0.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;">
+      <div style="width:28px;height:28px;background:linear-gradient(135deg,#e74c3c,#c0392b);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;">🛡</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text);">YieldVault Admin</div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+        <div class="live-pill"><div class="live-dot"></div><div class="live-txt">LIVE</div></div>
+        <span style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;" id="admClock"></span>
+        <a style="font-size:12px;color:var(--accent);cursor:pointer;" onclick="document.getElementById('adminPage').style.display='none';document.getElementById('authPage').classList.add('on');">← Platform</a>
+        <button class="nbtn" onclick="doAdminLogout()">Sign Out</button>
+      </div>
+    </nav>
+
+    <!-- ADMIN NAV TABS -->
+    <div style="background:var(--bg1);border-bottom:1px solid var(--border);padding:0 20px;display:flex;gap:4px;overflow-x:auto;">
+      <div class="adm-tab active" id="at-dashboard" onclick="goAdmTab('dashboard')">Dashboard</div>
+      <div class="adm-tab" id="at-users" onclick="goAdmTab('users')">Users <span id="aBadgeU" style="background:var(--accent);color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px;">0</span></div>
+      <div class="adm-tab" id="at-deposits" onclick="goAdmTab('deposits')">Deposits <span id="aBadgeD" style="background:var(--gold);color:#000;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px;">0</span></div>
+      <div class="adm-tab" id="at-withdrawals" onclick="goAdmTab('withdrawals')">Withdrawals <span id="aBadgeW" style="background:var(--red);color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px;">0</span></div>
+      <div class="adm-tab" id="at-stakes" onclick="goAdmTab('stakes')">Stakes</div>
+      <div class="adm-tab" id="at-settings" onclick="goAdmTab('settings')">Settings</div>
+      <div class="adm-tab" id="at-broadcast" onclick="goAdmTab('broadcast')">Broadcast</div>
+    </div>
+
+    <div style="max-width:1100px;margin:0 auto;padding:20px 16px 40px;">
+
+      <!-- DASHBOARD TAB -->
+      <div class="adm-sec on" id="as-dashboard">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px;">
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;border-top:2px solid var(--blue);">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Total Users</div>
+            <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--blue);" id="as-users">0</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;border-top:2px solid var(--green);">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Total Deposits</div>
+            <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--green);">$<span id="as-dep">0</span></div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;border-top:2px solid var(--gold);">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Pending Withdrawals</div>
+            <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--gold);" id="as-wd">0</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;border-top:2px solid var(--red);">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Active Stakes</div>
+            <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--red);" id="as-stakes">0</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;border-top:2px solid var(--purple);">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Platform TVL</div>
+            <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--purple);">$354.2M</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;border-top:2px solid var(--orange);">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Revenue Today</div>
+            <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--orange);">$<span id="as-rev">0</span></div>
+          </div>
+        </div>
+
+        <!-- PENDING DEPOSITS -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);">
+            <div style="font-size:14px;font-weight:700;color:var(--text);">Pending Deposit Confirmations</div>
+            <span style="background:rgba(242,201,76,.1);color:var(--gold);font-size:11px;font-weight:600;padding:3px 9px;border-radius:5px;" id="pendDepCnt">0 pending</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead><tr style="border-bottom:1px solid var(--border);">
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">User</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Amount</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Network</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">TX Hash</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Action</th>
+              </tr></thead>
+              <tbody id="pendDepTbl"><tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px;">No pending deposits</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- USERS TAB -->
+      <div class="adm-sec" id="as-users">
+        <div style="display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap;">
+          <input style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;flex:1;min-width:150px;" placeholder="Search users..." oninput="renderAdmUsers(this.value)">
+          <select style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text2);font-family:'Inter',sans-serif;font-size:13px;outline:none;" id="uFilter" onchange="renderAdmUsers('')">
+            <option value="all">All Users</option><option value="active">Active</option><option value="suspended">Suspended</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="openAddUserModal()">+ Add User</button>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);">
+            <div style="font-size:14px;font-weight:700;color:var(--text);">User Accounts</div>
+            <div style="font-size:11px;color:var(--text3);" id="admUserCount">0 users</div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead><tr style="border-bottom:1px solid var(--border);">
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Name</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Email</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Balance</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Deposited</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Status</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Actions</th>
+              </tr></thead>
+              <tbody id="admUserTbl"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px;">No users yet</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- DEPOSITS TAB -->
+      <div class="adm-sec" id="as-deposits">
+        <div style="display:flex;gap:9px;margin-bottom:14px;">
+          <input style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;flex:1;" placeholder="Search deposits..." oninput="renderAdmDeposits(this.value)">
+          <select style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text2);font-family:'Inter',sans-serif;font-size:13px;outline:none;" id="dFilter" onchange="renderAdmDeposits('')">
+            <option value="all">All</option><option value="pending">Pending</option><option value="approved">Approved</option>
+          </select>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+          <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:14px;font-weight:700;color:var(--text);">All Deposits</div>
+            <div style="font-size:11px;color:var(--text3);" id="admDepCount">0</div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead><tr style="border-bottom:1px solid var(--border);">
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">User</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Amount</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Network</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">TX Hash</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Status</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Action</th>
+              </tr></thead>
+              <tbody id="admDepTbl"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px;">No deposits</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- WITHDRAWALS TAB -->
+      <div class="adm-sec" id="as-withdrawals">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+          <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:14px;font-weight:700;color:var(--text);">Withdrawal Requests</div>
+            <div style="font-size:11px;color:var(--text3);" id="admWdCount">0</div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead><tr style="border-bottom:1px solid var(--border);">
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">User</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Amount</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Network</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Wallet</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Status</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Action</th>
+              </tr></thead>
+              <tbody id="admWdTbl"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px;">No requests</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- STAKES TAB -->
+      <div class="adm-sec" id="as-stakes">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+          <div style="padding:14px 18px;border-bottom:1px solid var(--border);">
+            <div style="font-size:14px;font-weight:700;color:var(--text);">All Stakes</div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead><tr style="border-bottom:1px solid var(--border);">
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">User</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Type</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Amount</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Network</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Date</th>
+                <th style="text-align:left;padding:9px 14px;font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);">Status</th>
+              </tr></thead>
+              <tbody id="admStakesTbl"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px;">No stakes</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS TAB -->
+      <div class="adm-sec" id="as-settings">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 22px;">
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;">Platform Settings</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border);"><div><div style="font-size:13px;font-weight:500;color:var(--text);">Deposits Enabled</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">Allow users to submit deposits</div></div><div style="width:42px;height:22px;border-radius:11px;background:var(--green);position:relative;cursor:pointer;" id="tog-dep" onclick="admToggle('dep')"><div style="width:16px;height:16px;border-radius:50%;background:#fff;position:absolute;top:3px;left:23px;transition:left .2s;" id="tknob-dep"></div></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border);"><div><div style="font-size:13px;font-weight:500;color:var(--text);">Withdrawals Enabled</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">Allow withdrawal requests</div></div><div style="width:42px;height:22px;border-radius:11px;background:var(--green);position:relative;cursor:pointer;" id="tog-wd" onclick="admToggle('wd')"><div style="width:16px;height:16px;border-radius:50%;background:#fff;position:absolute;top:3px;left:23px;transition:left .2s;" id="tknob-wd"></div></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border);"><div><div style="font-size:13px;font-weight:500;color:var(--text);">Flexible Pool Active</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">Enable flexible staking pool</div></div><div style="width:42px;height:22px;border-radius:11px;background:var(--green);position:relative;cursor:pointer;" id="tog-flex" onclick="admToggle('flex')"><div style="width:16px;height:16px;border-radius:50%;background:#fff;position:absolute;top:3px;left:23px;transition:left .2s;" id="tknob-flex"></div></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border);"><div><div style="font-size:13px;font-weight:500;color:var(--text);">Global APY Rate</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">Annual yield for all pools</div></div><div style="display:flex;align-items:center;gap:8px;"><span style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--gold);" id="apyVal">14%</span><button class="btn btn-outline btn-sm" onclick="admEditVal('apy','APY Rate','14%')">Edit</button></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border);"><div><div style="font-size:13px;font-weight:500;color:var(--text);">Withdrawal Fee</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">Fee on withdrawals</div></div><div style="display:flex;align-items:center;gap:8px;"><span style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--gold);" id="feeVal">1%</span><button class="btn btn-outline btn-sm" onclick="admEditVal('fee','Withdrawal Fee','1%')">Edit</button></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;"><div><div style="font-size:13px;font-weight:500;color:var(--text);">BEP20 Deposit Address</div><div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:2px;" id="bep20Disp">0x7820...f78bff</div></div><button class="btn btn-outline btn-sm" onclick="admEditVal('bep20','BEP20 Address','0x78209a6b829a82e9d440bad4182b040186f78bff')">Edit</button></div>
+        </div>
+      </div>
+
+      <!-- BROADCAST TAB -->
+      <div class="adm-sec" id="as-broadcast">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;max-width:520px;margin-bottom:14px;">
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;">Send Announcement</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">Notify all users or specific user</div>
+          <div class="fld"><label>Target</label><select id="bcTarget" onchange="document.getElementById('bcUF').style.display=this.value==='single'?'block':'none'"><option value="all">All Users</option><option value="single">Specific User</option></select></div>
+          <div class="fld" id="bcUF" style="display:none;"><label>User Email</label><input type="email" id="bcUEmail" placeholder="user@email.com"></div>
+          <div class="fld"><label>Type</label><select id="bcType"><option>Announcement</option><option>Deposit Confirmed</option><option>Withdrawal Processed</option><option>Bonus Reward</option><option>System Maintenance</option></select></div>
+          <div class="fld"><label>Message</label><textarea id="bcMsg" placeholder="Enter your message..."></textarea></div>
+          <button class="btn btn-primary btn-full" onclick="sendBroadcast()">Send Message</button>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+          <div style="padding:14px 18px;border-bottom:1px solid var(--border);"><div style="font-size:14px;font-weight:700;color:var(--text);">Message Log</div></div>
+          <div style="padding:0 18px;" id="bcLog"><div style="color:var(--text3);font-size:13px;text-align:center;padding:28px;">No messages sent</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ADD USER MODAL -->
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:600;align-items:center;justify-content:center;padding:20px;" id="addUserModal">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:18px;padding:24px;width:100%;max-width:380px;">
+    <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px;">Add New User</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">Manually create account</div>
+    <div class="fld"><label>Full Name</label><input type="text" id="auN" placeholder="John Doe"></div>
+    <div class="fld"><label>Email</label><input type="email" id="auE" placeholder="user@email.com"></div>
+    <div class="fld"><label>Initial Balance (USD)</label><input type="number" id="auB" value="0"></div>
+    <div style="display:flex;gap:9px;margin-top:14px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('addUserModal').style.display='none'">Cancel</button>
+      <button class="btn btn-green" style="flex:1;" onclick="doAddUser()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT VAL MODAL -->
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:600;align-items:center;justify-content:center;padding:20px;" id="admEditModal">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:18px;padding:24px;width:100%;max-width:360px;">
+    <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px;" id="aeTitle">Edit Value</div>
+    <div class="fld" style="margin-top:12px;"><label id="aeLbl">Value</label><input type="text" id="aeInput"></div>
+    <div style="display:flex;gap:9px;margin-top:14px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('admEditModal').style.display='none'">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="saveAdmEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
